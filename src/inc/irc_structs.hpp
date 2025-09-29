@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 14:57:02 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/29 17:17:08 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/09/29 19:19:48 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,5 +19,7 @@ typedef	struct s_client
 	int	fd;
 	std::string	nick;
 }				t_client;
+
+
 
 #endif

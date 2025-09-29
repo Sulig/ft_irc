@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 14:57:22 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/29 17:27:01 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/09/29 19:01:49 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,7 +38,7 @@ int	main(int argc, const char **args)
 	//*---------
 
 	//* Run irc
-
+	startServer(port);
 
 	return (0);
 }
