@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/30 17:07:58 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/09/30 20:31:37 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,7 @@
 #include <stdexcept>
 #include <sys/socket.h>
 
-void	startServer(int port)
+void	startServer(int port, std::string pass)
 {
 	try
 	{
@@ -50,40 +50,41 @@ void	startServer(int port)
 
 		//* 5- Listen
 		// Listening calls (queque clients to 20)
-		if (listen(server_fd, 20) < 0)
+		if (listen(server_fd, BACKLOG) < 0)
 			throw std::runtime_error("Cannot listen on soket");
 
 		std::cout << CGR << "IRC Server started on port: " << port << DEF << std::endl;
+		serverLoop(server_fd, pass);
 
-		/**/
-		//* Only for visual runner -->
-		struct sockaddr_in client_addr;
-		socklen_t	client_len =sizeof(client_addr);
-		int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
-		if (client_fd < 0)
-			throw std::runtime_error("Client Accept error");
-
-		std::cout << CCR << "Client connected!" << DEF << std::endl; // En el bucle se mostrariia un mensaje de bienvenida con el numero del cliente correspondiente (001, 002, etc.)
-
-		char buffer[1024];
-		int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-		if (n > 0)
-		{
-			buffer[n] = '\0';
-			std::cout << "Detected: " << buffer << std::endl;
-			std::string resp = "=[v)] Gochaa!!";
-			send(client_fd, resp.c_str(), resp.size(), 0);
-		}
-		/**/
-		//* En el proyecto, aqui se llamaria al bucle de `accept`
-		// serverLoop(server_id, pass);
 		//* Last -- Close the server (close the file-descriptor)
 		close(server_fd);
 		//* Maybe here do clean?
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << CR << "Server error: " << e.what() << DEF << std::endl;
+		std::cerr << CRR << "Server error: " << e.what() << DEF << std::endl;
 		return ;
+	}
+}
+
+void	serverLoop(int server_fd, std::string pass)
+{
+	t_irc	irc;
+	pollfd	server_poll;
+	server_poll.fd = server_fd;
+	server_poll.events = POLLIN;
+	irc.fds.push_back(server_poll);
+
+	while (true)
+	{
+		int _poll = poll(&irc.fds[0], irc.fds.size(), -1);
+		if (_poll < 0)
+		{
+			std::cerr << CR << "Error: `poll` failed" << std::endl;
+			break ;
+		}
+
+		//* Look each fd --> for
+		//for ()
 	}
 }
