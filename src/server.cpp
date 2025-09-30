@@ -6,11 +6,13 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/29 20:34:11 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/09/30 14:23:11 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/irc.hpp"
+#include <netinet/in.h>
+#include <stdexcept>
 #include <sys/socket.h>
 
 void	startServer(int port)
@@ -42,17 +44,40 @@ void	startServer(int port)
 			throw std::runtime_error("Cannot defime socket options");
 
 		//* 4- Bind
+		// Link the socket to an IP (address + port) //* if port is in use will return -1
 		if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0)
 			throw std::runtime_error("Cannot bind socket");
 
 		//* 5- Listen
-		// todo
+		// Listening calls (queque clients to 20)
+		if (listen(server_fd, 20) < 0)
+			throw std::runtime_error("Cannot listen on soket");
 
-		std::cout << "IRC Server started on port: " << port << std::endl;
+		std::cout << CGR << "IRC Server started on port: " << port << DEF << std::endl;
+
+		//* Only for visual runner -->
+		/**/
+		struct sockaddr_in client_addr;
+		socklen_t	client_len =sizeof(client_addr);
+		int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+		if (client_fd < 0)
+			throw std::runtime_error("Client Accept error");
+
+		std::cout << CCR << "Client connected!" << std::endl; // En el bucle se mostrariia un mensaje de bienvenida con el numero del cliente correspondiente (001, 002, etc.)
+
+		char buffer[1024];
+		int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+
+		/**/
+		//* En el proyecto, aqui se llamaria al bucle de `accept`
+		// serverLoop(server_id, pass);
+		//* Last -- Close the server (close the file-descriptor)
+		close(server_fd);
+		//* Maybe here do clean?
 	}
 	catch (const std::exception& e)
 	{
-		std::cerr << "Server error: " << e.what() << std::endl;
+		std::cerr << CR << "Server error: " << e.what() << DEF << std::endl;
 		return ;
 	}
 }
