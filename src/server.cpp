@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/30 14:23:11 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/09/30 17:07:58 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,19 +55,25 @@ void	startServer(int port)
 
 		std::cout << CGR << "IRC Server started on port: " << port << DEF << std::endl;
 
-		//* Only for visual runner -->
 		/**/
+		//* Only for visual runner -->
 		struct sockaddr_in client_addr;
 		socklen_t	client_len =sizeof(client_addr);
 		int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
 		if (client_fd < 0)
 			throw std::runtime_error("Client Accept error");
 
-		std::cout << CCR << "Client connected!" << std::endl; // En el bucle se mostrariia un mensaje de bienvenida con el numero del cliente correspondiente (001, 002, etc.)
+		std::cout << CCR << "Client connected!" << DEF << std::endl; // En el bucle se mostrariia un mensaje de bienvenida con el numero del cliente correspondiente (001, 002, etc.)
 
 		char buffer[1024];
 		int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-
+		if (n > 0)
+		{
+			buffer[n] = '\0';
+			std::cout << "Detected: " << buffer << std::endl;
+			std::string resp = "=[v)] Gochaa!!";
+			send(client_fd, resp.c_str(), resp.size(), 0);
+		}
 		/**/
 		//* En el proyecto, aqui se llamaria al bucle de `accept`
 		// serverLoop(server_id, pass);
