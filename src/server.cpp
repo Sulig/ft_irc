@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/30 20:31:37 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/01 14:25:18 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,8 +83,44 @@ void	serverLoop(int server_fd, std::string pass)
 			std::cerr << CR << "Error: `poll` failed" << std::endl;
 			break ;
 		}
-
-		//* Look each fd --> for
-		//for ()
+		for (size_t i = 0; i < irc.fds.size(); i++)
+		{
+			// There's some available data
+			if (irc.fds[i].revents & POLLIN)
+			{
+				if (irc.fds[i].fd == server_fd)
+					handleNewClient(server_fd, irc);
+				else
+					handleClientData(irc, i, pass);
+			}
+		}
 	}
+}
+
+void	handleNewClient(int server_fd, t_irc irc)
+{
+	try
+	{
+		struct sockaddr_in	client_addr;
+		socklen_t	client_len =sizeof(client_addr);
+		int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+		if (client_fd < 0)
+			throw std::runtime_error("Client Accept error");
+		std::cout << CCR << "Client connected!" << DEF << std::endl;
+
+		pollfd	new_client;
+		new_client.fd = client_fd;
+		new_client.events = POLLIN;
+		irc.fds.push_back(new_client);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << CR << "Error: " << e.what() << DEF << std::endl;
+		return ;
+	}
+}
+
+void	handleClientData(t_irc irc, size_t pos, std::string pass)
+{
+
 }
