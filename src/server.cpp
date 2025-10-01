@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/01 14:25:18 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/01 20:23:14 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,6 +73,7 @@ void	serverLoop(int server_fd, std::string pass)
 	pollfd	server_poll;
 	server_poll.fd = server_fd;
 	server_poll.events = POLLIN;
+	server_poll.revents = 0;
 	irc.fds.push_back(server_poll);
 
 	while (true)
@@ -83,13 +84,14 @@ void	serverLoop(int server_fd, std::string pass)
 			std::cerr << CR << "Error: `poll` failed" << std::endl;
 			break ;
 		}
+		std::cout << CY << "Clients connected so far: " << irc.fds.size() << DEF << std::endl;
 		for (size_t i = 0; i < irc.fds.size(); i++)
 		{
 			// There's some available data
 			if (irc.fds[i].revents & POLLIN)
 			{
 				if (irc.fds[i].fd == server_fd)
-					handleNewClient(server_fd, irc);
+					handleNewClient(server_fd, &irc);
 				else
 					handleClientData(irc, i, pass);
 			}
@@ -97,7 +99,7 @@ void	serverLoop(int server_fd, std::string pass)
 	}
 }
 
-void	handleNewClient(int server_fd, t_irc irc)
+void	handleNewClient(int server_fd, t_irc *irc)
 {
 	try
 	{
@@ -105,13 +107,21 @@ void	handleNewClient(int server_fd, t_irc irc)
 		socklen_t	client_len =sizeof(client_addr);
 		int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
 		if (client_fd < 0)
-			throw std::runtime_error("Client Accept error");
-		std::cout << CCR << "Client connected!" << DEF << std::endl;
+			throw std::runtime_error("Client Accept failed");
 
 		pollfd	new_client;
 		new_client.fd = client_fd;
 		new_client.events = POLLIN;
-		irc.fds.push_back(new_client);
+		new_client.revents = 0;
+		irc->fds.push_back(new_client);
+
+		t_client	client;
+		memset(&client, 0, sizeof(t_client));
+		client.fd = new_client.fd;
+		irc->clients[new_client.fd] = client;
+
+		std::cout << CCR << "New Client connected!" << DEF << std::endl;
+		return ;
 	}
 	catch (const std::exception& e)
 	{
@@ -122,5 +132,24 @@ void	handleNewClient(int server_fd, t_irc irc)
 
 void	handleClientData(t_irc irc, size_t pos, std::string pass)
 {
-
+	std::cout << "The [" << pos << "] is tring to send something." << std::endl;
+	(void)pass;
+	int	client_fd = irc.clients[pos].fd;
+	char buffer[1024];
+	int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+	if (n > 0)
+	{
+		buffer[n] = '\0';
+		std::cout << "Detected: " << buffer << std::endl;
+		std::string resp = "=[v)] Gochaa!!";
+		send(client_fd, resp.c_str(), resp.size(), 0);
+	}
+	else if (n == 0)
+	{
+		close(client_fd);
+		irc.clients[pos].fd = -1; //Quit this client later in clean
+		std::cout << "Come back again!" << std::endl;
+	}
+	else
+		std::cerr << "Error detected when reciving client message" << std::endl;
 }

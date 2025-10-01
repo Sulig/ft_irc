@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 15:00:31 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/01 13:04:21 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/01 20:22:55 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,6 +27,6 @@
 void	startServer(int port, std::string pass);
 void	serverLoop(int server_fd, std::string pass);
 
-void	handleNewClient(int server_fd, t_irc irc);
+void	handleNewClient(int server_fd, t_irc *irc);
 void	handleClientData(t_irc irc, size_t pos, std::string pass);
 #endif
