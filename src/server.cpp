@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/01 20:23:14 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/02 14:30:28 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,7 +84,6 @@ void	serverLoop(int server_fd, std::string pass)
 			std::cerr << CR << "Error: `poll` failed" << std::endl;
 			break ;
 		}
-		std::cout << CY << "Clients connected so far: " << irc.fds.size() << DEF << std::endl;
 		for (size_t i = 0; i < irc.fds.size(); i++)
 		{
 			// There's some available data
@@ -93,9 +92,12 @@ void	serverLoop(int server_fd, std::string pass)
 				if (irc.fds[i].fd == server_fd)
 					handleNewClient(server_fd, &irc);
 				else
-					handleClientData(irc, i, pass);
+					handleClientData(&irc, i, irc.fds[i].fd, pass);
 			}
+			if (irc.fds[i].revents & POLLHUP)
+				handleClientExit(&irc, i, irc.fds[i].fd);
 		}
+		std::cout << CY << "Clients connected so far: " << irc.fds.size() - 1 << DEF << std::endl;
 	}
 }
 
@@ -120,7 +122,7 @@ void	handleNewClient(int server_fd, t_irc *irc)
 		client.fd = new_client.fd;
 		irc->clients[new_client.fd] = client;
 
-		std::cout << CCR << "New Client connected!" << DEF << std::endl;
+		std::cout << CCR << "New Client connected, with FD = " << new_client.fd << DEF << std::endl;
 		return ;
 	}
 	catch (const std::exception& e)
@@ -130,26 +132,34 @@ void	handleNewClient(int server_fd, t_irc *irc)
 	}
 }
 
-void	handleClientData(t_irc irc, size_t pos, std::string pass)
+void	handleClientExit(t_irc *irc, size_t pos, int client_fd)
 {
-	std::cout << "The [" << pos << "] is tring to send something." << std::endl;
+	std::cout << CP << client_fd << " |Tv]// Come back soon!" << std::endl;
+	close(client_fd);
+	irc->fds[pos].fd = -1;
+	irc->clients[client_fd].fd = -1;
+	irc->clients.erase(client_fd);
+	//todo -> remove the fd's with == -1
+	//todo -> also clear the `irc->clients[client_fd]`
+}
+
+void	handleClientData(t_irc *irc, size_t pos, int client_fd, std::string pass)
+{
 	(void)pass;
-	int	client_fd = irc.clients[pos].fd;
 	char buffer[1024];
+
+	std::cout << "The [" << pos << "] is tring to send something." << std::endl;
+	std::cout << "Client FD = " << client_fd << std::endl;
 	int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 	if (n > 0)
 	{
 		buffer[n] = '\0';
 		std::cout << "Detected: " << buffer << std::endl;
-		std::string resp = "=[v)] Gochaa!!";
+		std::string resp = "=[v)] Gochaa!!\n";
 		send(client_fd, resp.c_str(), resp.size(), 0);
 	}
 	else if (n == 0)
-	{
-		close(client_fd);
-		irc.clients[pos].fd = -1; //Quit this client later in clean
-		std::cout << "Come back again!" << std::endl;
-	}
+		handleClientExit(irc, pos, client_fd);
 	else
-		std::cerr << "Error detected when reciving client message" << std::endl;
+		std::cerr << CR << "Error detected when reciving client message" << DEF << std::endl;
 }
