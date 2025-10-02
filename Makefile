@@ -6,13 +6,13 @@
 #    By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/09/10 17:01:41 by sadoming          #+#    #+#              #
-#    Updated: 2025/10/01 19:54:05 by sadoming         ###   ########.fr        #
+#    Updated: 2025/10/02 19:48:16 by sadoming         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	:=	ircserv
 
-INPUT	:=	6600 password
+INPUT	:=	7000 password
 # ------------------ #
 # Flags:
 

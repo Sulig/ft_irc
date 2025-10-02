@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/02 14:30:28 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/02 19:41:52 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,30 +136,47 @@ void	handleClientExit(t_irc *irc, size_t pos, int client_fd)
 {
 	std::cout << CP << client_fd << " |Tv]// Come back soon!" << std::endl;
 	close(client_fd);
-	irc->fds[pos].fd = -1;
-	irc->clients[client_fd].fd = -1;
 	irc->clients.erase(client_fd);
-	//todo -> remove the fd's with == -1
-	//todo -> also clear the `irc->clients[client_fd]`
+	irc->fds.erase(irc->fds.begin() + pos);
+	//todo -> also clear the `irc->clients[client_fd]` if some memory used.
 }
 
 void	handleClientData(t_irc *irc, size_t pos, int client_fd, std::string pass)
 {
 	(void)pass;
-	char buffer[1024];
+	int btrd = 0;
+	char tmp[512];
 
 	std::cout << "The [" << pos << "] is tring to send something." << std::endl;
 	std::cout << "Client FD = " << client_fd << std::endl;
-	int n = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-	if (n > 0)
+	size_t	found = irc->clients[client_fd].buffer.find_first_of("\r\n");
+	do
 	{
-		buffer[n] = '\0';
-		std::cout << "Detected: " << buffer << std::endl;
-		std::string resp = "=[v)] Gochaa!!\n";
-		send(client_fd, resp.c_str(), resp.size(), 0);
-	}
-	else if (n == 0)
-		handleClientExit(irc, pos, client_fd);
-	else
-		std::cerr << CR << "Error detected when reciving client message" << DEF << std::endl;
+		btrd = recv(client_fd, tmp, sizeof(tmp) - 1, 0);
+		std::cout << "btrd recieved: " << btrd << std::endl;
+		if (btrd == 0)
+		{
+			handleClientExit(irc, pos, client_fd);
+			return ;
+		}
+		else if (btrd > 0)
+		{
+			tmp[btrd] = '\0';
+			irc->clients[client_fd].buffer += tmp;
+			if (irc->clients[client_fd].buffer.empty())
+				return ;
+		}
+		else
+		{
+			std::cerr << CR << "Error detected when reciving client message" << DEF << std::endl;
+			return ;
+		}
+
+		found = irc->clients[client_fd].buffer.find_first_of("\r\n");
+	} while (btrd > 0 && found == std::string::npos);
+	std::cout << "Detected: " << irc->clients[client_fd].buffer << std::endl;
+	std::string resp = "=[v)] Gochaa!!\n";
+	send(client_fd, resp.c_str(), resp.size(), 0);
+	//todo -> Remember to clean the buffer client when won't need it
+	irc->clients[client_fd].buffer.clear();
 }
