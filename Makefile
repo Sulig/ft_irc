@@ -6,13 +6,13 @@
 #    By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/09/10 17:01:41 by sadoming          #+#    #+#              #
-#    Updated: 2025/10/02 19:48:16 by sadoming         ###   ########.fr        #
+#    Updated: 2025/10/06 13:46:54 by sadoming         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	:=	ircserv
 
-INPUT	:=	7000 password
+INPUT	:=	6667 WORD
 # ------------------ #
 # Flags:
 
@@ -43,7 +43,7 @@ OBJ_DIR		:=	./obj
 MAK	:= Makefile
 HDR	:= $(INC_DIR)/ # Headers
 
-SRC_SRC := irc_main.cpp server.cpp
+SRC_SRC := irc_main.cpp client.cpp server.cpp
 
 SRC := $(addprefix $(SRC_DIR), $(SRC_SRC))
 
@@ -104,20 +104,6 @@ val: $(NAME)
 val-strict: $(NAME)
 	@echo " ~ Running valgrind ./$(NAME) $(INPUT)"
 	@valgrind --leak-check=full --show-leak-kinds=all ./$(NAME) $(INPUT)
-
-# ------------------
-
-test: $(NAME)
-	@echo "$(Y) ~ Test in progress.. $(DEF)"
-	@echo "  - None imput	->"
-	@./$(NAME)
-	@./$(NAME) 3 5 9 7 4
-	@./$(NAME) 2 6 3 9 1 7
-	@./$(NAME) 3 8 1 0 2 5 7 4 9
-	@./$(NAME) 5 10 7 2 6 4 9 3 8
-	@./$(NAME) 3 8 1 10 2 5 7 4 9 0 12
-	@./$(NAME) $(INPUT)
-	@echo "$(C) Thats all!! $(DEF)"
 # **************************************************************************** #
 # Clean region
 clean:
