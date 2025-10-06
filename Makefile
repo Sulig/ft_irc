@@ -6,7 +6,7 @@
 #    By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/09/10 17:01:41 by sadoming          #+#    #+#              #
-#    Updated: 2025/10/06 13:46:54 by sadoming         ###   ########.fr        #
+#    Updated: 2025/10/06 16:54:17 by sadoming         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -43,7 +43,7 @@ OBJ_DIR		:=	./obj
 MAK	:= Makefile
 HDR	:= $(INC_DIR)/ # Headers
 
-SRC_SRC := irc_main.cpp client.cpp server.cpp
+SRC_SRC := irc_main.cpp Client.cpp Server.cpp
 
 SRC := $(addprefix $(SRC_DIR), $(SRC_SRC))
 
