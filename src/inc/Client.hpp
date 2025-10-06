@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/06 17:46:50 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/06 20:29:17 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,8 +19,10 @@ class	Client
 {
 	private:
 		int		_fd;
+		size_t	_pos;
 		bool	_is_logged;
 		std::string	_buffer;
+		std::string	_sendbuffer;
 		std::string	_nick;
 		std::string	_user;
 
@@ -33,6 +35,7 @@ class	Client
 		std::string	getBuffer(void);
 
 		//** */
+		int	sendPendingData(void);
 };
 
 #endif

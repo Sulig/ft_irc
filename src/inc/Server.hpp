@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/06 17:50:38 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/06 20:26:40 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 
 # include <poll.h>
 
+# include <algorithm>
 # include <map>
 # include <vector>
 # include <iostream>
@@ -30,7 +31,9 @@
 # include <cstring>
 # include <stdexcept>
 
-# define BACKLOG	20	// Max X persons in conexion queque
+# define SERVER_NAME	"IRCSERV"
+# define VERSION		"v.0.1"
+# define BACKLOG		20	// Max X persons in conexion queque
 
 /*	COMMANDS	*/
 # define HELP	0
@@ -64,6 +67,7 @@ class	Server
 		void	addNewClient();
 		void	readClientData(size_t pos, int client_fd);
 		void	handleClientExit(size_t pos, int client_fd);
+		void	sendWelcome(int client_fd);
 
 	public:
 		Server();

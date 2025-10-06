@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/06 17:56:17 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/06 20:30:09 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -136,6 +136,18 @@ void	Server::addNewClient()
 		std::cerr << CR << "Error: " << e.what() << DEF << std::endl;
 		return ;
 	}
+}
+
+void	Server::sendWelcome(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	std::string welcome = ":" + std::string(SERVER_NAME) + " 001 guest :Welcome to the IRC Network!\r\n";
+	welcome += ":" + std::string(SERVER_NAME) + " 002 guest :Your host is " + std::string(SERVER_NAME) + "\r\n";
+	welcome += ":" + std::string(SERVER_NAME) + " 003 guest :This server was created on |" + "20/2025 - 11:30" + "\r\n";
+	welcome += ":" + std::string(SERVER_NAME) + " 004 guest :" + std::string(SERVER_NAME) + std::string(VERSION) + "\r\n";
+	//** */
+	//Actualizar poll[_pos] to = POLLIN & POLLOUT
 }
 
 void	Server::handleClientExit(size_t pos, int client_fd)
