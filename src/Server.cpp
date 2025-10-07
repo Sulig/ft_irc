@@ -6,11 +6,12 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/06 20:30:09 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/07 14:32:27 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/Server.hpp"
+# include "inc/utils.hpp"
 
 /* Constructor & destructor */
 Server::Server(){	_server_fd = 0;	}
@@ -100,10 +101,14 @@ void	Server::serverLoop(void)
 				else
 					readClientData(i, _fds[i].fd);
 			}
+			// There's something to send
+			if (_fds[i].revents & POLLOUT)
+				handleClientWrite(_fds[i].fd);
+			// Client has disconnected
 			if (_fds[i].revents & POLLHUP)
 				handleClientExit(i, _fds[i].fd);
 		}
-		std::cout << CY << "Servers connected so far: " << _fds.size() - 1 << DEF << std::endl;
+		std::cout << CY << "Clients connected so far: " << _fds.size() - 1 << DEF << std::endl;
 	}
 }
 
@@ -126,9 +131,10 @@ void	Server::addNewClient()
 
 		Client	*client = new Client(new_client.fd);
 		_clients[new_client.fd] = client;
+		_clients[new_client.fd]->setPos(_fds.size() - 1);
 
 		std::cout << CCR << "New Client connected, with FD = " << new_client.fd << DEF << std::endl;
-		//* Send welcome
+		sendWelcome(new_client.fd);
 		return ;
 	}
 	catch (const std::exception& e)
@@ -142,22 +148,60 @@ void	Server::sendWelcome(int client_fd)
 {
 	if (_clients.find(client_fd) == _clients.end())
 		return ;
-	std::string welcome = ":" + std::string(SERVER_NAME) + " 001 guest :Welcome to the IRC Network!\r\n";
-	welcome += ":" + std::string(SERVER_NAME) + " 002 guest :Your host is " + std::string(SERVER_NAME) + "\r\n";
-	welcome += ":" + std::string(SERVER_NAME) + " 003 guest :This server was created on |" + "20/2025 - 11:30" + "\r\n";
-	welcome += ":" + std::string(SERVER_NAME) + " 004 guest :" + std::string(SERVER_NAME) + std::string(VERSION) + "\r\n";
-	//** */
-	//Actualizar poll[_pos] to = POLLIN & POLLOUT
+	std::string welcome = "";
+	if (_clients[client_fd]->getIsLogged())
+	{
+		Client *client = _clients[client_fd];
+		welcome += ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
+		welcome += ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
+		welcome += ":This server was created " + getCreationTime() + "\r\n";
+	}
+	else
+	{
+		welcome += std::string(CWR) + "* [###########################] *\r\n";
+		welcome += "* \\          WELCOME          / *\r\n";
+		welcome += "*  [#########################]  *\r\n";
+		welcome += std::string(CY) + "\n> You're not registered yet!\r\n";
+		welcome += "> You must register first using the PASS & NICK commands.\r\n";
+		welcome += std::string(CC) + "* \\ Send HELP or /help for more info / *" + std::string(DEF) + "\r\n";
+	}
+	//Actualize the events of this client to send welcome
+	_fds[_clients[client_fd]->getPos()].events = POLLIN | POLLOUT;
+	_clients[client_fd]->setSendBuffer(welcome);
+}
+
+void	Server::sendMessageTo(int client_fd, std::string message)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	//Actualize the events of this client to send the message
+	_fds[_clients[client_fd]->getPos()].events = POLLIN | POLLOUT;
+	_clients[client_fd]->setSendBuffer(message);
+}
+
+void	Server::handleClientWrite(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	int result = _clients[client_fd]->sendPendingData();
+	if (result == -2)
+		handleClientExit(_clients[client_fd]->getPos(), client_fd);
+	else if (result >= 0 && _clients[client_fd]->getSendBuffer().empty())
+		_fds[_clients[client_fd]->getPos()].events = POLLIN;
 }
 
 void	Server::handleClientExit(size_t pos, int client_fd)
 {
 	//todo -> set proper farewell }[vP]
 	std::cout << CP << client_fd << " |Tv]// Come back soon!" << std::endl;
+
+	if (_clients.find(client_fd) != _clients.end())
+	{
+		delete _clients[client_fd];
+		_clients.erase(client_fd);
+	}
 	close(client_fd);
-	_clients.erase(client_fd);
 	_fds.erase(_fds.begin() + pos);
-	delete _clients[client_fd];
 }
 
 void	Server::readClientData(size_t pos, int client_fd)
@@ -191,10 +235,46 @@ void	Server::readClientData(size_t pos, int client_fd)
 		found = buffer.find_first_of("\r\n");
 	} while (btrd > 0 && found == std::string::npos);
 	//--
-	std::cout << "Detected: " << buffer << std::endl;
-	std::string resp = "=[v)] Gochaa!!\n";
-	send(client_fd, resp.c_str(), resp.size(), 0);
+	std::string resp = "=[v)] Gochaa!\n";
+	sendMessageTo(client_fd, resp);
 	//--
-	//parsing
+	buffer = normalizeCommand(buffer);
+	_clients[client_fd]->setBuffer(buffer);
+	_clients[client_fd]->setCommand(identifyCMD(buffer));
+	std::cout << client_fd << "| Want to: " << buffer << ", nm." << identifyCMD(buffer) << std::endl;
 }
 /* ----- */
+
+int	Server::identifyCMD(std::string cmd)
+{
+	if (cmd == "PASS")
+		return PASS;
+	if (cmd == "NICK")
+		return NICK;
+	if (cmd == "USER")
+		return USER;
+	if (cmd == "PRIVMSG")
+		return PRIVMSG;
+	if (cmd == "QUIT")
+		return QUIT;
+	if (cmd == "JOIN")
+		return JOIN;
+	if (cmd == "PART")
+		return PART;
+	if (cmd == "KICK")
+		return KICK;
+	if (cmd == "INVITE")
+		return INVITE;
+	if (cmd == "TOPIC")
+		return TOPIC;
+	if (cmd == "MODE")
+		return MODE;
+	if (cmd == "PING")
+		return PING;
+	if (cmd == "PONG")
+		return PONG;
+	if (cmd == "HELP")
+		return HELP;
+
+	return (UNKNOW);
+}

@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/06 20:26:40 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/07 14:21:28 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,26 +16,29 @@
 # include "Client.hpp"
 # include "colors.hpp"
 
-# include <poll.h>
 
-# include <algorithm>
-# include <map>
-# include <vector>
-# include <iostream>
+# include <fcntl.h>
+# include <poll.h>
 # include <stdlib.h>
 # include <sys/socket.h>
 # include <sys/types.h>
 # include <netinet/in.h>
 # include <unistd.h>
 
+# include <algorithm>
+# include <map>
+# include <vector>
+# include <iostream>
 # include <cstring>
 # include <stdexcept>
+# include <cerrno>
 
 # define SERVER_NAME	"IRCSERV"
 # define VERSION		"v.0.1"
 # define BACKLOG		20	// Max X persons in conexion queque
 
 /*	COMMANDS	*/
+# define UNKNOW	-1
 # define HELP	0
 # define PASS	1
 # define NICK	2
@@ -50,8 +53,8 @@
 # define TOPIC	'T'
 # define MODE	'M'
 
-# define PING	'\p'
-# define PONG	'\t'
+# define PING	'\\'
+# define PONG	'/'
 
 class	Server
 {
@@ -66,8 +69,14 @@ class	Server
 		/*-- CLIENT HANDLER --*/
 		void	addNewClient();
 		void	readClientData(size_t pos, int client_fd);
+		void	handleClientWrite(int client_fd);
 		void	handleClientExit(size_t pos, int client_fd);
 		void	sendWelcome(int client_fd);
+		void	sendMessageTo(int client_fd, std::string message);
+
+		/*-- PARSER --*/
+		int		identifyCMD(std::string cmd);
+		void	setClientCommand(int client_fd);
 
 	public:
 		Server();

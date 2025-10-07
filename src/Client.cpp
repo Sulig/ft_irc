@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/06 20:11:24 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/07 13:37:25 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,11 +19,25 @@ Client::Client(int fd)	{	this->_fd = fd; _is_logged = false;	}
 Client::~Client()	{}
 /* ----- */
 
-/* GETTERS */
-std::string Client::getBuffer(void)	{	return (this->_buffer);	}
+/*	GETTERS	&&	SETTERS*/
+size_t	Client::getPos(void)	{	return (this->_pos);	}
+bool	Client::getIsLogged(void)	{	return (this->_is_logged);	}
+int		Client::getCommand(void)	{	return (this->_command);	}
+std::string	Client::getBuffer(void)	{	return (this->_buffer);	}
+std::string	Client::getSendBuffer(void)	{	return (this->_sendbuffer);	}
+std::string	Client::getNick(void)	{	return (this->_nick);	}
+
+void	Client::setPos(size_t pos)	{	this->_pos = pos;	}
+void	Client::setIsLogged(bool logged)	{	this->_is_logged = logged;	}
+void	Client::setCommand(int command)	{	this->_command = command;	}
+void	Client::setBuffer(std::string buffer)	{	this->_buffer = buffer;	}
+void	Client::setSendBuffer(std::string _send)	{	this->_sendbuffer = _send;	}
+void	Client::setNick(std::string nick)	{	this->_nick = nick;	}
 /* ----- */
 
 /*	/=/	*/
+void	Client::appendToSendBuffer(std::string _send){	_sendbuffer += _send;	}
+
 int	Client::sendPendingData(void)
 {
 	if (_sendbuffer.empty())
@@ -35,6 +49,7 @@ int	Client::sendPendingData(void)
 		_sendbuffer.erase();
 		return (btss);
 	}
+	// Not ready to send
 	if (errno == EAGAIN || errno == EWOULDBLOCK)
 		return (-1);
 	else
