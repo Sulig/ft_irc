@@ -1,22 +1,14 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   utils.hpp                                          :+:      :+:    :+:   */
+/*   help.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/10/07 12:31:58 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/07 18:07:19 by sadoming         ###   ########.fr       */
+/*   Created: 2025/10/07 18:29:46 by sadoming          #+#    #+#             */
+/*   Updated: 2025/10/07 18:30:09 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef UTILS_HPP
-# define UTILS_HPP
+#include "inc/Server.hpp"
 
-#include <string>
-
-std::string getCreationTime();
-std::string	itoa(int n);
-std::string	normalizeCommand(std::string input);
-
-#endif

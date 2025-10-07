@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/07 13:37:25 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/07 19:59:19 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@ Client::~Client()	{}
 /*	GETTERS	&&	SETTERS*/
 size_t	Client::getPos(void)	{	return (this->_pos);	}
 bool	Client::getIsLogged(void)	{	return (this->_is_logged);	}
+bool	Client::getIsWelcomeSend(void)	{	return (this->_is_welcomeSend);	}
 int		Client::getCommand(void)	{	return (this->_command);	}
 std::string	Client::getBuffer(void)	{	return (this->_buffer);	}
 std::string	Client::getSendBuffer(void)	{	return (this->_sendbuffer);	}
@@ -29,6 +30,7 @@ std::string	Client::getNick(void)	{	return (this->_nick);	}
 
 void	Client::setPos(size_t pos)	{	this->_pos = pos;	}
 void	Client::setIsLogged(bool logged)	{	this->_is_logged = logged;	}
+void	Client::setIsWelcomeSend(bool welcome)	{	this->_is_welcomeSend = welcome;	}
 void	Client::setCommand(int command)	{	this->_command = command;	}
 void	Client::setBuffer(std::string buffer)	{	this->_buffer = buffer;	}
 void	Client::setSendBuffer(std::string _send)	{	this->_sendbuffer = _send;	}

@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/07 14:21:28 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/07 19:52:06 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,25 +37,6 @@
 # define VERSION		"v.0.1"
 # define BACKLOG		20	// Max X persons in conexion queque
 
-/*	COMMANDS	*/
-# define UNKNOW	-1
-# define HELP	0
-# define PASS	1
-# define NICK	2
-# define PRIVMSG	3
-
-# define QUIT	4
-# define USER	'U'
-# define JOIN	'J'
-# define PART	'P'
-# define KICK	'K'
-# define INVITE	'I'
-# define TOPIC	'T'
-# define MODE	'M'
-
-# define PING	'\\'
-# define PONG	'/'
-
 class	Server
 {
 	private:
@@ -63,7 +44,9 @@ class	Server
 		std::string				_pass;
 		std::vector<pollfd>		_fds;
 		std::map<int, Client*>	_clients;
+		std::vector<std::string>	_commands;
 
+		void	startServerVars(void);
 		void	serverLoop(void);
 
 		/*-- CLIENT HANDLER --*/
@@ -77,6 +60,14 @@ class	Server
 		/*-- PARSER --*/
 		int		identifyCMD(std::string cmd);
 		void	setClientCommand(int client_fd);
+
+		void	executeCMD(int client_fd);
+
+		/*	COMMANDS	*/
+		std::string	helpMe(size_t helpWith, bool is_logged);
+		std::string	pass(std::string password, int client_fd);
+		std::string	clear(void);
+		std::string	serverStatus(void);
 
 	public:
 		Server();

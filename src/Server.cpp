@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/07 14:32:27 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/07 19:58:34 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,28 @@
 # include "inc/utils.hpp"
 
 /* Constructor & destructor */
-Server::Server(){	_server_fd = 0;	}
-Server::Server(int port, std::string pass){	startServer(port, pass);	}
+void	Server::startServerVars(void)
+{
+	_server_fd = 0;
+	_commands.push_back("HELP");
+	_commands.push_back("PASS");
+	_commands.push_back("NICK");
+	_commands.push_back("USER");
+	_commands.push_back("PRIVMSG");
+	_commands.push_back("QUIT");
+	_commands.push_back("JOIN");
+	_commands.push_back("PART");
+	_commands.push_back("KICK");
+	_commands.push_back("INVITE");
+	_commands.push_back("TOPIC");
+	_commands.push_back("MODE");
+	_commands.push_back("PING");
+	_commands.push_back("PONG");
+	_commands.push_back("CLEAR");
+	_commands.push_back("STATUS");
+}
+Server::Server(){	startServerVars();	}
+Server::Server(int port, std::string pass){	startServerVars(); startServer(port, pass);	}
 Server::~Server(){}
 /* ----- */
 
@@ -108,7 +128,6 @@ void	Server::serverLoop(void)
 			if (_fds[i].revents & POLLHUP)
 				handleClientExit(i, _fds[i].fd);
 		}
-		std::cout << CY << "Clients connected so far: " << _fds.size() - 1 << DEF << std::endl;
 	}
 }
 
@@ -154,7 +173,7 @@ void	Server::sendWelcome(int client_fd)
 		Client *client = _clients[client_fd];
 		welcome += ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
 		welcome += ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
-		welcome += ":This server was created " + getCreationTime() + "\r\n";
+		welcome += ":This server was created on: " + getCreationTime() + "\r\n";
 	}
 	else
 	{
@@ -238,43 +257,140 @@ void	Server::readClientData(size_t pos, int client_fd)
 	std::string resp = "=[v)] Gochaa!\n";
 	sendMessageTo(client_fd, resp);
 	//--
-	buffer = normalizeCommand(buffer);
 	_clients[client_fd]->setBuffer(buffer);
+	buffer = normalizeCommand(buffer);
 	_clients[client_fd]->setCommand(identifyCMD(buffer));
-	std::cout << client_fd << "| Want to: " << buffer << ", nm." << identifyCMD(buffer) << std::endl;
+	executeCMD(client_fd);
 }
 /* ----- */
 
 int	Server::identifyCMD(std::string cmd)
 {
-	if (cmd == "PASS")
-		return PASS;
-	if (cmd == "NICK")
-		return NICK;
-	if (cmd == "USER")
-		return USER;
-	if (cmd == "PRIVMSG")
-		return PRIVMSG;
-	if (cmd == "QUIT")
-		return QUIT;
-	if (cmd == "JOIN")
-		return JOIN;
-	if (cmd == "PART")
-		return PART;
-	if (cmd == "KICK")
-		return KICK;
-	if (cmd == "INVITE")
-		return INVITE;
-	if (cmd == "TOPIC")
-		return TOPIC;
-	if (cmd == "MODE")
-		return MODE;
-	if (cmd == "PING")
-		return PING;
-	if (cmd == "PONG")
-		return PONG;
-	if (cmd == "HELP")
-		return HELP;
-
-	return (UNKNOW);
+	for (size_t i = 0; i < _commands.size(); i++)
+	{
+		size_t	found = cmd.find(_commands[i], 0);
+		if (found != std::string::npos)
+			return (i);
+	}
+	return (-1);
 }
+
+void	Server::executeCMD(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	Client *client = _clients[client_fd];
+	std::string help = std::string(DEF);
+	if (!client->getIsLogged())
+	{
+		if (client->getCommand() != 0 || client->getCommand() != 1)
+		{
+			help += std::string(CR) + ":You're not logged yet!\r\n";
+			help += std::string(CY) + ":Use the command PASS to login!" + std::string(DEF) + "\r\n";
+		}
+		else if (client->getCommand() == 1)
+		{
+			//-- use pass comand
+			return ;
+		}
+		else
+			help += helpMe(0, false);
+		sendMessageTo(client_fd, help);
+		return ;
+	}
+	switch (client->getCommand())
+	{
+		case 0: helpMe(0, true); break ;
+		case 14: sendMessageTo(client_fd, clear()); break;
+		case 15: sendMessageTo(client_fd, serverStatus()); break;
+		default:
+			std::string help = std::string(CR) + ":This command don't exist or is not implemented yet." + std::string(DEF) + "\r\n";
+			break ;
+	}
+}
+
+#pragma region COMMANDS
+
+std::string	Server::helpMe(size_t helpWith, bool is_logged)
+{
+	std::string	help = std::string(CWR);
+	if (!is_logged)
+	{
+		help += "*  [#########################]  *\r\n";
+		help += "Thank you for using our server, to login follow this steps:\r\n";
+		help += std::string(CC) + " :STEP 1 - Use PASS command:\r\n";
+		help += helpMe(1, true);
+		help += std::string(CC) + " :STEP 2 - Use NICK or USER command:\r\n";
+		help += helpMe(2, true);
+		help += std::string(CC) + " :STEP 3 - Have fun!\r\n";
+		help += std::string(CP) + "If you need some help with a specific command, use HELP COMMAND" + std::string(DEF) + "\r\n";
+	}
+	else
+	{
+		switch (helpWith)
+		{
+			case 0:
+			help += ":This are the supported commands:\r\n";
+				for (size_t i = 0; i < _commands.size(); i++)
+					help += "\t" + itoa(i) + "- |" + _commands[i] + "\r\n";
+				help += "*  [#########################]  *\r\n";
+				break;
+
+			case 1:
+			help += "Correct usage: PASS password\r\n";
+			help += ":Loggin in server with the server password;\r\n";
+			help += ":You can't use other commands until you're logged!\r\n";
+			help += "\t* Advice: This will set your nickname with a number // Use NICK to change it\r\n";
+				break;
+
+			case 2:
+			help += "Correct usage: NICK nikie\r\n";
+			help += ":Set your custom nick;\r\n";
+			help += "\t* Advice: Don't use ' ', ',', '*', '?', '!' or '@' (There are some cases more)\r\n";
+				break;
+
+			case 3:
+			help += "Correct usage: USER in-progress --not-implemented\r\n";
+			help += ":Set your nick and real username;\r\n";
+				break;
+
+			default:
+				help += std::string(CR) + ": The command that are you searching for don't exist!\r\n";
+				help += std::string(DEF) + ":This are the supported commands:\r\n";
+				for (size_t i = 0; i < _commands.size(); i++)
+					help += "\t" + itoa(i) + "- |" + _commands[i] + "\r\n";
+				help += "*  [#########################]  *\r\n";
+				break;
+		}
+	}
+	return (help);
+}
+
+std::string	Server::pass(std::string password, int client_fd)
+{
+	std::string	help = std::string(DEF);
+	if (password == _pass)
+	{
+		help += std::string(CGR) + "-- PASSWORD CORRECT --\r\n";
+		help += std::string(DEF) + "- Your nickname will be: " + itoa(_clients[client_fd]->getPos()) + "\r\n";
+		help += "To change it, use the NICK command. Have fun! :)\r\n";
+		_clients[client_fd]->setIsLogged(true);
+		_clients[client_fd]->setNick(itoa(_clients[client_fd]->getPos()));
+	}
+	return (help);
+}
+
+std::string	Server::clear(void) {	return (std::string(CLEAN));	}
+std::string	Server::serverStatus(void)
+{
+	std::string status = ":" + std::string(SERVER_NAME) + " // Current status \\\\\r\n";
+	status += ":Status: |" + std::string(CG) + "Active" + std::string(DEF) + "|\r\n";
+	status += ":Currently listening on port: " + std::string(CG) + itoa(_server_fd) + std::string(DEF) + "|\r\n";
+	status += std::string(CY) + ":Clients connected so far: " + itoa(_fds.size() - 1) + std::string(DEF) + "|\r\n";
+	status += ":This server was created on: " + getCreationTime() + "\r\n";
+	// here maybe we can print the disponible channels
+	std::cout << status;
+	return (status);
+}
+
+#pragma endregion
