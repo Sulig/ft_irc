@@ -10,10 +10,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "irc_structs.hpp" // otros de channel, que no se te olvide NO hacer circulares raras
-
-struct t_client;   // viene de tu irc_structs.hpp
-struct t_irc;      // idem
+#include "helpers.hpp" // todo lo que tenga channel tiene acceso a esto
+#include "Client.hpp" // vigila que haces, include circular
 
 class Channel
 {
@@ -77,9 +75,9 @@ class Channel
         bool  isInvited(const std::string& nick) const;
         void  clearInvite(const std::string& nick);
 
-        // Broadcast
-        void  broadcast(const t_irc& irc, const std::string& raw) const;
-        void  broadcastExcept(const t_irc& irc, int exceptFd, const std::string& raw) const;
+        // Broadcast, usuario hace algo (JOIN, PART...), miembros del canal deben enterarse.
+        void  broadcast(const std::map<int, Client*>& clients, const std::string& raw) const;
+        void  broadcastExcept(const std::map<int, Client*>& clients, Client* except, const std::string& raw) const;
 
         // Serialización de modos (para RPL_CHANNELMODEIS)
         std::string modeString() const;     // p.ej. "+itkl 10 clave"

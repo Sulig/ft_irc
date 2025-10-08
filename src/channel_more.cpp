@@ -1,4 +1,4 @@
-#include "channel_more.hpp"
+#include "inc/channel_more.hpp"
 
 static std::string normName(const std::string& s)
 {

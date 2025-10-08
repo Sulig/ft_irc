@@ -59,7 +59,7 @@ class	Client
 		void	setCommand(int command);
 		void	setAgrs(std::vector<std::string> args);
 
-		//** */
+		/** */
 		void	appendToSendBuffer(std::string _send);
 		int	sendPendingData(void);
 };

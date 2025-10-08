@@ -1,4 +1,4 @@
-#include "channel.hpp"
+#include "inc/channel.hpp"
 
 // constructor
 Channel::Channel(const std::string& name) : _name(name), _topic(""),
@@ -7,6 +7,27 @@ Channel::Channel(const std::string& name) : _name(name), _topic(""),
                                             _key(""), _limit(0) {}
 
 Channel::~Channel() {}
+
+Channel& Channel::operator=(const Channel& other)
+{
+    if (this != &other)
+    {
+        // Copia superficial (shallow) de punteros a Client*: se comparten los mismos Client*
+        // Si hay que "duplicar" clientes (no suele tener sentido), cambiar esto.
+        this->_name         = other._name;
+        this->_topic        = other._topic;
+        this->_members      = other._members; // vector<Client*>
+        this->_operators    = other._operators; // set<int> o set de lo que uses
+        this->_mode_i       = other._mode_i;
+        this->_mode_t       = other._mode_t;
+        this->_mode_k       = other._mode_k;
+        this->_mode_l       = other._mode_l;
+        this->_key          = other._key;
+        this->_limit        = other._limit;
+        this->_invitedNicks = other._invitedNicks;  // set<std::string>
+    }
+    return *this;
+}
 
 const std::string& Channel::name() const 
 {
@@ -144,26 +165,35 @@ void Channel::clearInvite(const std::string& nick)
     _invitedNicks.erase(nick);
 }
 
-// Envío raw (usa irc.clients para obtener prefix si necesitas hacerlo fuera)
-static void sendRawFd(int fd, const std::string& raw)
+void Channel::broadcast(const std::map<int, Client*>& clients, const std::string& raw) const
 {
-    // raw debe llevar \r\n al final
-    (void)::send(fd, raw.c_str(), raw.size(), 0);
-}
-
-void Channel::broadcast(const t_irc& irc, const std::string& raw) const
-{
-    (void)irc;
-    for (size_t i=0;i<_members.size();++i) sendRawFd(_members[i], raw);
-}
-
-void Channel::broadcastExcept(const t_irc& irc, int exceptFd, const std::string& raw) const
-{
-    (void)irc;
-    for (size_t i=0;i<_members.size();++i)
+    // Importante: raw debe terminar en \r\n (hazlo donde construyes el mensaje)
+    for (size_t i = 0; i < _members.size(); ++i)
     {
-        if (_members[i] != exceptFd)
-            sendRawFd(_members[i], raw);
+        int fd = _members[i];
+        std::map<int, Client*>::const_iterator iter = clients.find(fd);
+        if (iter == clients.end())
+            continue;
+
+        Client* c = iter->second;
+        c->appendToSendBuffer(raw);
+    }
+}
+
+void Channel::broadcastExcept(const std::map<int, Client*>& clients, Client* except, const std::string& raw) const
+{
+    for (size_t i = 0; i < _members.size(); ++i)
+    {
+        int fd = _members[i];
+        std::map<int, Client*>::const_iterator iter = clients.find(fd);
+        if (iter == clients.end())
+            continue;
+
+        Client* c = iter->second;
+        if (c == except) // saltar al emisor
+            continue;
+
+        c->appendToSendBuffer(raw);
     }
 }
 
