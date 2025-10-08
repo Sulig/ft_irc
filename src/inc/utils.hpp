@@ -1,40 +1,22 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   irc_structs.hpp                                    :+:      :+:    :+:   */
+/*   utils.hpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/09/29 14:57:02 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/30 19:57:35 by sadoming         ###   ########.fr       */
+/*   Created: 2025/10/07 12:31:58 by sadoming          #+#    #+#             */
+/*   Updated: 2025/10/07 18:07:19 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef IRC_STRUCTS_HPP
+#ifndef UTILS_HPP
+# define UTILS_HPP
 
-# include <poll.h>
-# include <string>
-# include <map>
-# include <vector>
+#include <string>
 
-# define BACKLOG	20	// Max X persons in conexion queque
-
-/*	Client	*/
-typedef struct	s_client
-{
-	int	fd;
-	std::string	buffer;
-	std::string	nick;
-	std::string	user;
-}				t_client;
-
-/*	GLOBAL SRUCT	*/
-typedef struct	s_irc
-{
-	std::vector<pollfd>		fds;
-	std::map<int, t_client>	clients;
-}				t_irc;
-
-
+std::string getCreationTime();
+std::string	itoa(int n);
+std::string	normalizeCommand(std::string input);
 
 #endif

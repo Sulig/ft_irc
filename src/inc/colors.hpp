@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/30 13:05:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/09/30 13:08:04 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/02 19:19:16 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,5 +32,8 @@
 
 /* DEFFAULT COLOR*/
 # define DEF "\033[0m"
+
+/* CLEAN SCREEN */
+# define CLEAN "\033[2J\033[H"
 
 #endif

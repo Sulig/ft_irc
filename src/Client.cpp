@@ -1,0 +1,64 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Client.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
+/*   Updated: 2025/10/08 13:16:44 by sadoming         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+# include "inc/Client.hpp"
+# include "inc/Server.hpp"
+
+/* Constructor & destructor */
+Client::Client()	{	_fd = 0; _is_logged = false;	}
+Client::Client(int fd)	{	this->_fd = fd; _is_logged = false;	}
+Client::~Client()	{}
+/* ----- */
+
+/*	GETTERS	&&	SETTERS*/
+size_t	Client::getPos(void)	{	return (this->_pos);	}
+bool	Client::getIsLogged(void)	{	return (this->_is_logged);	}
+bool	Client::getIsWelcomeSend(void)	{	return (this->_is_welcomeSend);	}
+std::string	Client::getBuffer(void)	{	return (this->_buffer);	}
+std::string	Client::getSendBuffer(void)	{	return (this->_sendbuffer);	}
+std::string	Client::getNick(void)	{	return (this->_nick);	}
+
+int		Client::getCommand(void)	{	return (this->_command);	}
+std::vector<std::string>	Client::getAgrs(void)	{	return (this->_args);	}
+
+void	Client::setPos(size_t pos)	{	this->_pos = pos;	}
+void	Client::setIsLogged(bool logged)	{	this->_is_logged = logged;	}
+void	Client::setIsWelcomeSend(bool welcome)	{	this->_is_welcomeSend = welcome;	}
+void	Client::setBuffer(std::string buffer)	{	this->_buffer = buffer;	}
+void	Client::setSendBuffer(std::string _send)	{	this->_sendbuffer = _send;	}
+void	Client::setNick(std::string nick)	{	this->_nick = nick;	}
+
+void	Client::setCommand(int command)	{	this->_command = command;	}
+void	Client::setAgrs(std::vector<std::string> args)	{	this->_args = args;	}
+/* ----- */
+
+/*	/=/	*/
+void	Client::appendToSendBuffer(std::string _send){	_sendbuffer += _send;	}
+
+int	Client::sendPendingData(void)
+{
+	if (_sendbuffer.empty())
+		return (0);
+
+	int btss = send(_fd, _sendbuffer.c_str(), _sendbuffer.length(), MSG_DONTWAIT);
+	if (btss > 0)
+	{
+		_sendbuffer.erase();
+		return (btss);
+	}
+	// Not ready to send
+	if (errno == EAGAIN || errno == EWOULDBLOCK)
+		return (-1);
+	else
+		return (-2);
+}
+/* ----- */
