@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/07 19:52:06 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/08 13:53:45 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@
 class	Server
 {
 	private:
+		int						_port;
 		int						_server_fd;
 		std::string				_pass;
 		std::vector<pollfd>		_fds;
@@ -58,9 +59,8 @@ class	Server
 		void	sendMessageTo(int client_fd, std::string message);
 
 		/*-- PARSER --*/
-		int		identifyCMD(std::string cmd);
-		void	setClientCommand(int client_fd);
-
+		size_t	identifyCMD(std::string cmd, int client_fd);
+		void	parseCommand(std::string input, int client_fd);
 		void	executeCMD(int client_fd);
 
 		/*	COMMANDS	*/

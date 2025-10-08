@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/07 20:16:32 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/08 13:15:23 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@ class	Client
 		size_t	_pos;
 
 		size_t	_command;
-		std::vector<std::string>	args;
+		std::vector<std::string>	_args;
 
 		std::string	_buffer;
 		std::string	_sendbuffer;
