@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/08 14:17:15 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/08 20:24:16 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -111,7 +111,7 @@ void	Server::serverLoop(void)
 		int _poll = poll(&_fds[0], _fds.size(), -1);
 		if (_poll < 0)
 		{
-			std::cerr << CR << "Error: `poll` failed" << std::endl;
+			std::cerr << CRR << "Error: `poll` failed" << std::endl;
 			break ;
 		}
 		for (size_t i = 0; i < _fds.size(); i++)
@@ -122,7 +122,7 @@ void	Server::serverLoop(void)
 				if (_fds[i].fd == _server_fd)
 					addNewClient();
 				else
-					readClientData(i, _fds[i].fd);
+					processClientMsg(_fds[i].fd);
 			}
 			// There's something to send
 			if (_fds[i].revents & POLLOUT)
@@ -141,10 +141,13 @@ void	Server::addNewClient()
 	try
 	{
 		struct sockaddr_in	client_addr;
-		socklen_t	client_len =sizeof(client_addr);
+		socklen_t	client_len = sizeof(client_addr);
 		int client_fd = accept(_server_fd, (struct sockaddr*)&client_addr, &client_len);
 		if (client_fd < 0)
 			throw std::runtime_error("Client Accept failed");
+
+		//	Set(F_SETFL) this socket/fd as No-block
+		fcntl(client_fd, F_SETFL, O_NONBLOCK);
 
 		pollfd	new_client;
 		new_client.fd = client_fd;
@@ -165,6 +168,17 @@ void	Server::addNewClient()
 		std::cerr << CR << "Error: " << e.what() << DEF << std::endl;
 		return ;
 	}
+}
+
+void	Server::handleClientWrite(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	int result = _clients[client_fd]->sendPendingData();
+	if (result == -2)
+		handleClientExit(_clients[client_fd]->getPos(), client_fd);
+	else if (result >= 0 && _clients[client_fd]->getSendBuffer().empty())
+		_fds[_clients[client_fd]->getPos()].events = POLLIN;
 }
 
 void	Server::sendWelcome(int client_fd)
@@ -202,66 +216,92 @@ void	Server::sendMessageTo(int client_fd, std::string message)
 	_clients[client_fd]->setSendBuffer(message);
 }
 
-void	Server::handleClientWrite(int client_fd)
-{
-	if (_clients.find(client_fd) == _clients.end())
-		return ;
-	int result = _clients[client_fd]->sendPendingData();
-	if (result == -2)
-		handleClientExit(_clients[client_fd]->getPos(), client_fd);
-	else if (result >= 0 && _clients[client_fd]->getSendBuffer().empty())
-		_fds[_clients[client_fd]->getPos()].events = POLLIN;
-}
-
 void	Server::handleClientExit(size_t pos, int client_fd)
 {
+	if (pos >= _fds.size())
+	{
+		std::cerr << CR << "Invalid position!" << DEF << std::endl;
+		return ;
+	}
+	if (_fds[pos].fd != client_fd)
+	{
+		std::cerr << CP << "FD mismatch in handleClExit" << DEF << std::endl;
+		bool	found = false;
+		for (size_t i = 0; i < _fds.size(); i++) {
+			if (_fds[i].fd == client_fd)
+			{
+				pos = i;
+				found = true;
+				break ;
+			}
+		}
+		if (!found)
+		{
+			std::cerr << CR << "|" << client_fd << "| not found!" << DEF << std::endl;
+			return ;
+		}
+	}
 	//todo -> set proper farewell }[vP]
-	std::cout << CP << client_fd << " |Tv]// Come back soon!" << std::endl;
+	std::cout << CP << client_fd << " |Tv]// Come back soon!" << DEF << std::endl;
+
+	close(client_fd);
 
 	if (_clients.find(client_fd) != _clients.end())
 	{
 		delete _clients[client_fd];
 		_clients.erase(client_fd);
 	}
-	close(client_fd);
 	_fds.erase(_fds.begin() + pos);
+	for (size_t i = 0; i < _fds.size(); i++)
+		if (_clients.find(_fds[i].fd) != _clients.end())
+			_clients[_fds[i].fd]->setPos(i);
 }
 
-void	Server::readClientData(size_t pos, int client_fd)
+void	Server::readClientData(int client_fd, std::string store)
 {
-	int btrd = 0;
-	char tmp[512];
+	int		btrd = 1;
+	char	buffer[513];
+
+	btrd = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
+	if (btrd <= 0)
+	{
+		if (btrd == 0)
+			std::cout << CY << "Client |" << client_fd << "| has disconnected." << DEF << std::endl;
+		else
+			std::cout << CR << "Error when reading from client |" << client_fd << "| :" << strerror(errno) << DEF << std::endl;
+		if (errno != EAGAIN && errno != EWOULDBLOCK)
+			handleClientExit(_clients[client_fd]->getPos(), client_fd);
+		return ;
+	}
+	buffer[btrd] = '\0';
+	store += buffer;
+	_clients[client_fd]->setBuffer(store);
+}
+
+void	Server::processClientMsg(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return;
+
+	readClientData(client_fd, _clients[client_fd]->getBuffer());
+
+	if (_clients.find(client_fd) == _clients.end())
+		return;
 
 	std::string	buffer = _clients[client_fd]->getBuffer();
-	buffer.clear();
-	size_t	found = buffer.find_first_of("\r\n");
-	do
+	if (buffer.size() > 512)
 	{
-		btrd = recv(client_fd, tmp, sizeof(tmp) - 1, 0);
-		if (btrd == 0)
-		{
-			handleClientExit(pos, client_fd);
-			return ;
-		}
-		else if (btrd > 0)
-		{
-			tmp[btrd] = '\0';
-			buffer += tmp;
-			if (buffer.empty())
-				return ;
-		}
-		else
-		{
-			std::cerr << CR << "Error detected when reciving client message" << DEF << std::endl;
-			return ;
-		}
-		found = buffer.find_first_of("\r\n");
-	} while (btrd > 0 && found == std::string::npos);
+		std::string msg = std::string(CR) + "Your message is too long!\r\n" + std::string(DEF);
+		sendMessageTo(client_fd, msg);
+		buffer.clear();
+		return ;
+	}
 	_clients[client_fd]->setBuffer(buffer);
 	buffer = normalizeCommand(buffer);
 	identifyCMD(buffer, client_fd);
 	parseCommand(_clients[client_fd]->getBuffer(), client_fd);
 	executeCMD(client_fd);
+	_clients[client_fd]->setBuffer("");
 }
 /* ----- */
 #pragma endregion CLIENT HANDLER

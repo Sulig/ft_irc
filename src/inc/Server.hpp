@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/08 13:53:45 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/08 19:02:01 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,7 +52,8 @@ class	Server
 
 		/*-- CLIENT HANDLER --*/
 		void	addNewClient();
-		void	readClientData(size_t pos, int client_fd);
+		void	readClientData(int client_fd, std::string store);
+		void	processClientMsg(int client_fd);
 		void	handleClientWrite(int client_fd);
 		void	handleClientExit(size_t pos, int client_fd);
 		void	sendWelcome(int client_fd);
