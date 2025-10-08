@@ -6,13 +6,13 @@
 #    By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/09/10 17:01:41 by sadoming          #+#    #+#              #
-#    Updated: 2025/10/07 12:33:07 by sadoming         ###   ########.fr        #
+#    Updated: 2025/10/08 16:52:35 by sadoming         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	:=	ircserv
 
-INPUT	:=	6667 WORD
+INPUT	:=	6667 word
 # ------------------ #
 # Flags:
 
