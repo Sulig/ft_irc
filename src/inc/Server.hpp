@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/08 19:02:01 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 11:24:53 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@
 # define SERVER_NAME	"IRCSERV"
 # define VERSION		"v.0.1"
 # define BACKLOG		20	// Max X persons in conexion queque
+# define MAX_BITS_RD	512	// Max bits for reading
 
 class	Server
 {

@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/08 20:24:16 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 12:47:14 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -260,21 +260,35 @@ void	Server::handleClientExit(size_t pos, int client_fd)
 void	Server::readClientData(int client_fd, std::string store)
 {
 	int		btrd = 1;
-	char	buffer[513];
+	char	buffer[MAX_BITS_RD + 1];
+	size_t	found = store.find_first_of("\r\n");
 
-	btrd = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-	if (btrd <= 0)
+	while (btrd > 0 && found == std::string::npos)
 	{
+		btrd = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
 		if (btrd == 0)
+		{
 			std::cout << CY << "Client |" << client_fd << "| has disconnected." << DEF << std::endl;
-		else
-			std::cout << CR << "Error when reading from client |" << client_fd << "| :" << strerror(errno) << DEF << std::endl;
-		if (errno != EAGAIN && errno != EWOULDBLOCK)
 			handleClientExit(_clients[client_fd]->getPos(), client_fd);
-		return ;
+			return ;
+		}
+		else if (btrd > 0)
+		{
+			buffer[btrd] = '\0';
+			store += buffer;
+			if (store.empty())
+				return ;
+		}
+		else
+		{
+			std::cout << CR << "Error when reading from client |" << client_fd << "| :" << strerror(errno) << DEF << std::endl;
+			if (!(errno != EAGAIN && errno != EWOULDBLOCK))
+				break ;
+		}
+		found = store.find_first_of("\r\n");
 	}
-	buffer[btrd] = '\0';
-	store += buffer;
+	if (_clients.find(client_fd) == _clients.end())
+		return;
 	_clients[client_fd]->setBuffer(store);
 }
 
@@ -289,13 +303,16 @@ void	Server::processClientMsg(int client_fd)
 		return;
 
 	std::string	buffer = _clients[client_fd]->getBuffer();
-	if (buffer.size() > 512)
+	if (buffer.size() > MAX_BITS_RD)
 	{
 		std::string msg = std::string(CR) + "Your message is too long!\r\n" + std::string(DEF);
 		sendMessageTo(client_fd, msg);
 		buffer.clear();
 		return ;
 	}
+	else if (buffer.find_first_of("\r\n") == std::string::npos)
+		return ;
+
 	_clients[client_fd]->setBuffer(buffer);
 	buffer = normalizeCommand(buffer);
 	identifyCMD(buffer, client_fd);
