@@ -1,8 +1,80 @@
 #include "channel_cmds.hpp"
+#include "helpers.hpp"
+#include "inc/channel.hpp"
+#include "inc/channel_more.hpp"   // class Channels
+#include "inc/helpers.hpp"        // getClientFd, sendRawFd, isChannelName
+#include "inc/Client.hpp"
+#include <sstream>
+#include <cstdlib>
+
+
+// Small helpers
+static inline std::string nickOrStar(Client* c) { return c ? c->getNick() : "*"; }
+static inline std::string prefixOf(Client* c) { return ":" + nickOrStar(c) + "!" + nickOrStar(c) + "@localhost"; }
+
+
+
+/* PART: PART <#chan> [<message>] */
+void handlePART(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client*     me = getClientFd(irc, fd);
+    std::string chName;
+    Channel*    ch;
+    std::string partMsg;
+    std::string raw;
+
+    if (!me)
+        return;
+    if (params.empty())
+    {
+        sendRawFd(fd, ":server 461 " + nickOrStar(me) + " PART :Not enough parameters\r\n");
+        return;
+    }
+
+    chName = params[0];
+    if (!isChannelName(chName)) chName = "#" + chName;
+
+    ch = chans.find(chName);
+    if (!ch || !ch->has(fd)){
+        sendRawFd(fd, ":server 442 " + me->getNick() + " " + chName + " :You're not on that channel\r\n");
+        return;
+    }
+
+    partMsg = (params.size() >= 2 ? params[1] : std::string());
+    raw = prefixOf(me) + " PART " + chName + (partMsg.empty()?"":" :"+partMsg) + "\r\n";
+    ch->broadcast(*irc.clients, raw);
+
+    ch->remove(fd);
+    chans.eraseIfEmpty(chName);
+}
 
 
 
 
+
+
+
+
+
+
+/* QUIT: QUIT [:message]  (we receive already-parsed quitMsg) */
+void handleQUIT(t_irc& irc, Channels& chans, int fd, const std::string& quitMsg)
+{
+    Client*     me = getClientFd(irc, fd);
+    std::string raw;
+    if (!me)
+        return;
+
+    // Broadcast to every channel where this fd is present.
+    // Channels to do, sweep (removeClientEverywhere)
+    raw = prefixOf(me) + " QUIT" + (quitMsg.empty()?"":" :"+quitMsg) + "\r\n";
+
+    // we ask Channels to remove everywhere; inside, after each removal, you can
+    // call Channel::broadcastExcept(...), if keep Channel pointer before removing.
+    (void)raw; // to broadcast here, use `raw`.
+
+    chans.removeClientEverywhere(irc, fd);
+}
 
 
 

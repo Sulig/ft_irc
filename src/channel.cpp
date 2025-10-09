@@ -12,8 +12,9 @@ Channel& Channel::operator=(const Channel& other)
 {
     if (this != &other)
     {
-        // Copia superficial (shallow) de punteros a Client*: se comparten los mismos Client*
-        // Si hay que "duplicar" clientes (no suele tener sentido), cambiar esto.
+        // Copia superficial (shallow)
+        // Si hay que "duplicar" channels (no suele tener sentido), cambiar esto.
+        // No se usa nunca esto, esta en privado
         this->_name         = other._name;
         this->_topic        = other._topic;
         this->_members      = other._members; // vector<Client*>
@@ -62,7 +63,8 @@ void Channel::add(int fd)
 void Channel::remove(int fd)
 {
     std::vector<int>::iterator it = std::find(_members.begin(), _members.end(), fd);
-    if (it != _members.end()) _members.erase(it);
+    if (it != _members.end())
+        _members.erase(it);
     _operators.erase(fd);
 }
 

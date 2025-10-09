@@ -1,9 +1,6 @@
 #ifndef CHANNELS_HPP
 #define CHANNELS_HPP
 
-#include <map>
-#include <string>
-
 #include "channel.hpp"
 
 struct t_irc;

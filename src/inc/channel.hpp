@@ -10,8 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "helpers.hpp" // todo lo que tenga channel tiene acceso a esto
-#include "Client.hpp" // vigila que haces, include circular
+class Client;
 
 class Channel
 {
@@ -20,13 +19,13 @@ class Channel
         std::string           _topic;         // puede estar vacío
         std::vector<int>      _members;       // fds de los clientes
         std::set<int>         _operators;     // fds con privilegio +o
-        bool                  _mode_i;        // invite-only
-        bool                  _mode_t;        // solo ops pueden cambiar topic
-        bool                  _mode_k;        // canal protegido por clave
-        bool                  _mode_l;        // límite de usuarios
-        std::string           _key;           // clave si +k
-        std::size_t           _limit;         // límite si +l
-        std::set<std::string> _invitedNicks;  // nicks invitados (modo +i)
+        bool                  _mode_i;        // invite-only mode
+        bool                  _mode_t;        // solo ops pueden cambiar topic mode
+        bool                  _mode_k;        // canal protegido por clave mode
+        bool                  _mode_l;        // límite de usuarios mode
+        std::string           _key;           // clave si mode = +k
+        std::size_t           _limit;         // límite si mode = +l
+        std::set<std::string> _invitedNicks;  // nicks invitados (modo +i) nick = nickname
 
         Channel();                           // no permitido
         Channel(const Channel&);

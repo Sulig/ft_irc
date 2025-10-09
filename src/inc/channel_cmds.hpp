@@ -1,9 +1,6 @@
 #ifndef COMMANDS_CHANNEL_HPP
 #define COMMANDS_CHANNEL_HPP
 
-#include <vector>
-#include <string>
-
 #include "channel.hpp"
 
 struct t_irc;
