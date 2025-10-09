@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 13:41:03 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 18:53:31 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,6 +45,7 @@ void	Client::setAgrs(std::vector<std::string> args)	{	this->_args = args;	}
 
 /*	/=/	*/
 void	Client::appendToSendBuffer(std::string _send){	_sendbuffer += _send;	}
+void	Client::clearArgs(void){	_args.clear();	}
 
 int	Client::sendPendingData(void)
 {

@@ -6,12 +6,13 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 13:54:48 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 20:37:17 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/Server.hpp"
 # include "inc/utils.hpp"
+#include <cstddef>
 #include <sstream>
 
 /* Constructor & destructor */
@@ -34,7 +35,7 @@ void	Server::startServerVars(void)
 	_commands.push_back("PING");
 	_commands.push_back("PONG");
 	_commands.push_back("CLEAR");
-	_commands.push_back("STATUS");
+	_commands.push_back("STAT");
 }
 Server::Server(){	startServerVars();	}
 Server::Server(int port, std::string pass){	startServerVars(); startServer(port, pass);	}
@@ -320,6 +321,7 @@ void	Server::processClientMsg(int client_fd)
 	parseCommand(_clients[client_fd]->getBuffer(), client_fd);
 	executeCMD(client_fd);
 	_clients[client_fd]->setBuffer("");
+	_clients[client_fd]->clearArgs();
 }
 /* ----- */
 #pragma endregion CLIENT HANDLER
@@ -338,6 +340,8 @@ size_t	Server::identifyCMD(std::string cmd, int client_fd)
 		}
 		return (-1);
 	}
+	if (_clients.find(client_fd) == _clients.end())
+		return (-1);
 	_clients[client_fd]->setCommand(-1);
 	for (size_t i = 0; i < _commands.size(); i++)
 	{
@@ -348,11 +352,39 @@ size_t	Server::identifyCMD(std::string cmd, int client_fd)
 			found += _commands[i].size();
 			cmd = _clients[client_fd]->getBuffer().substr(found);
 			_clients[client_fd]->setBuffer(cmd);
+			break ;
 		}
 	}
 	return (_clients[client_fd]->getCommand());
 }
 
+/*
+void	Server::parseCommand(std::string input, int client_fd)
+{
+	std::vector<std::string>	args;
+	size_t	pos = 0, last = 0;
+
+	while (pos < input.size())
+	{
+		pos = input.find_first_not_of(' ', pos);
+		if (pos < input.size())
+		{
+			if (input[pos] == ':')
+			{
+				args.push_back(input.substr(pos + 1));
+				break ;
+			}
+			last = input.find_first_not_of(' ', pos);
+			if (last >= input.size())
+				last = input.size() - 1;
+			args.push_back(input.substr(pos, last));
+		}
+	}
+	_clients[client_fd]->setAgrs(args);
+	_clients[client_fd]->setBuffer("");
+}
+*/
+/**/
 void	Server::parseCommand(std::string input, int client_fd)
 {
 	std::vector<std::string>	args;
@@ -373,6 +405,7 @@ void	Server::parseCommand(std::string input, int client_fd)
 	_clients[client_fd]->setAgrs(args);
 	_clients[client_fd]->setBuffer("");
 }
+/**/
 
 void	Server::executeCMD(int client_fd)
 {
@@ -511,13 +544,21 @@ std::string	Server::nick(int client_fd)
 		return (std::string(CR) + ":Nickname not given!" + std::string(DEF) + "\r\n");
 
 	std::string	nick = args[0];
+	if (nick.size() > NICK_MAX_CHARS)
+		return (std::string(CR) + ":Nickname is too long!" + std::string(DEF) + "\r\n");
 
-	if (identifyCMD(nick, 0) != -1)
-		return (std::string(CY) + ":Nickname can't be one of the commands!" + std::string(DEF) + "\r\n");
+	if (!(identifyCMD(nick, 0) >= _commands.size()))
+		return (std::string(CR) + ":Nickname can't be one of the commands!" + std::string(DEF) + "\r\n");
 
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 		if (nick == it->second->getNick())
-			return (std::string(CR) + ":Nickname is already in use!" + std::string(DEF) + "\r\n");
+			return (std::string(CY) + ":Nickname is already in use!" + std::string(DEF) + "\r\n");
+
+	if (std::string(NICK_MUST_NOT_STARTWITH).find_first_of(nick[0]) != std::string::npos)
+		return (std::string(CR) + ":Nickname must not start with: " + std::string(NICK_MUST_NOT_STARTWITH) + std::string(DEF) + "\r\n");
+
+	if (nick.find_first_of(NICK_MUST_NOT_CONTAIN) != std::string::npos)
+		return (std::string(CR) + ":Nickname must not contain: " + std::string(NICK_MUST_NOT_CONTAIN) + std::string(DEF) + "\r\n");
 
 	_clients[client_fd]->setNick(nick);
 	help += std::string(CG) + ":Nickname changed successfully to:" + nick + std::string(DEF) + "\r\n";

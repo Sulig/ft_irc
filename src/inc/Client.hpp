@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 13:41:09 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 18:53:29 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,10 @@
 
 # include <string>
 # include <vector>
+
+# define	NICK_MAX_CHARS			9
+# define	NICK_MUST_NOT_CONTAIN	" ,*?!@.;"
+# define	NICK_MUST_NOT_STARTWITH	"$:#&~"
 
 class	Client
 {
@@ -63,6 +67,7 @@ class	Client
 
 		//** */
 		void	appendToSendBuffer(std::string _send);
+		void	clearArgs(void);
 		int	sendPendingData(void);
 };
 
