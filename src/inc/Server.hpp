@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 11:24:53 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 13:21:28 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,11 +41,11 @@
 class	Server
 {
 	private:
-		int						_port;
-		int						_server_fd;
-		std::string				_pass;
-		std::vector<pollfd>		_fds;
-		std::map<int, Client*>	_clients;
+		int							_port;
+		int							_server_fd;
+		std::string					_pass;
+		std::vector<pollfd>			_fds;
+		std::map<int, Client*>		_clients;
 		std::vector<std::string>	_commands;
 
 		void	startServerVars(void);
@@ -54,13 +54,13 @@ class	Server
 		/*-- CLIENT HANDLER --*/
 		void	addNewClient();
 		void	readClientData(int client_fd, std::string store);
-		void	processClientMsg(int client_fd);
 		void	handleClientWrite(int client_fd);
 		void	handleClientExit(size_t pos, int client_fd);
 		void	sendWelcome(int client_fd);
 		void	sendMessageTo(int client_fd, std::string message);
 
 		/*-- PARSER --*/
+		void	processClientMsg(int client_fd);
 		size_t	identifyCMD(std::string cmd, int client_fd);
 		void	parseCommand(std::string input, int client_fd);
 		void	executeCMD(int client_fd);
@@ -68,6 +68,7 @@ class	Server
 		/*	COMMANDS	*/
 		std::string	helpMe(size_t helpWith, bool is_logged);
 		std::string	pass(std::string password, int client_fd);
+		std::string	nick(int client_fd);
 		std::string	clear(void);
 		std::string	serverStatus(void);
 

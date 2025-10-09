@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/08 13:15:23 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 13:41:09 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,7 @@ class	Client
 		std::string	getBuffer(void);
 		std::string	getSendBuffer(void);
 		std::string	getNick(void);
+		std::string	getUser(void);
 
 		int		getCommand(void);
 		std::vector<std::string>	getAgrs(void);
@@ -55,6 +56,7 @@ class	Client
 		void	setBuffer(std::string buffer);
 		void	setSendBuffer(std::string _send);
 		void	setNick(std::string nick);
+		void	setUser(std::string user);
 
 		void	setCommand(int command);
 		void	setAgrs(std::vector<std::string> args);

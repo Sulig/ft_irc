@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 12:47:14 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/09 13:54:48 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -195,6 +195,7 @@ void	Server::sendWelcome(int client_fd)
 		welcome += ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
 		welcome += ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
 		welcome += ":This server was created on: " + getCreationTime() + "\r\n";
+		_clients[client_fd]->setIsWelcomeSend(true);
 	}
 	else
 	{
@@ -407,7 +408,8 @@ void	Server::executeCMD(int client_fd)
 			}
 		break ;
 
-		case 1: pass(tmp[0], client_fd); break;
+		case 1: sendMessageTo(client_fd, pass(tmp[0], client_fd)); break;
+		case 2: sendMessageTo(client_fd, nick(client_fd)); break;
 
 		case 14: sendMessageTo(client_fd, clear()); break;
 		case 15: sendMessageTo(client_fd, serverStatus()); break;
@@ -431,7 +433,7 @@ std::string	Server::helpMe(size_t helpWith, bool is_logged)
 		help += "Thank you for using our server, to login follow this steps:\r\n";
 		help += std::string(CC) + " :STEP 1 - Use PASS command:\r\n";
 		help += helpMe(1, true);
-		help += std::string(CC) + " :STEP 2 - Use NICK or USER command:\r\n";
+		help += std::string(CC) + " :STEP 2 - Use NICK and USER command:\r\n";
 		help += helpMe(2, true);
 		help += std::string(CC) + " :STEP 3 - Have fun!\r\n";
 		help += std::string(CP) + "If you need some help with a specific command, use HELP COMMAND" + std::string(DEF) + "\r\n";
@@ -463,6 +465,7 @@ std::string	Server::helpMe(size_t helpWith, bool is_logged)
 			case 3:
 			help += "Correct usage: USER in-progress --not-implemented\r\n";
 			help += ":Set your nick and real username;\r\n";
+			help += "\t* Advice: Some characters are restricted!\r\n";
 				break;
 
 			case 14: help += "So many messages? -> Clear your terminal;\r\n"; break;
@@ -496,6 +499,30 @@ std::string	Server::pass(std::string password, int client_fd)
 	}
 	else
 		help += std::string(CRR) + "-- INCORRECT PASSWORD!! --" + std::string(DEF) + "\r\n";
+	return (help);
+}
+
+std::string	Server::nick(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getAgrs();
+
+	if (args.empty())
+		return (std::string(CR) + ":Nickname not given!" + std::string(DEF) + "\r\n");
+
+	std::string	nick = args[0];
+
+	if (identifyCMD(nick, 0) != -1)
+		return (std::string(CY) + ":Nickname can't be one of the commands!" + std::string(DEF) + "\r\n");
+
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+		if (nick == it->second->getNick())
+			return (std::string(CR) + ":Nickname is already in use!" + std::string(DEF) + "\r\n");
+
+	_clients[client_fd]->setNick(nick);
+	help += std::string(CG) + ":Nickname changed successfully to:" + nick + std::string(DEF) + "\r\n";
+	if (_clients[client_fd]->getUser().empty())
+		help += std::string(CG) + " *Don't forget to add a username to! (use USER)" + std::string(DEF) + "\r\n";
 	return (help);
 }
 
