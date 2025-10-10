@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/07 12:04:34 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 19:21:23 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/10 13:11:15 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,6 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
-#include <vector>
 
 std::string	getCreationTime()
 {
@@ -31,13 +30,21 @@ std::string	itoa(int n)
 	return oss.str();
 }
 
+bool	isAllPrintable(std::string s)
+{
+	for (size_t i = 0; i < s.size(); ++i)
+	{
+		unsigned char c = s[i];
+		if (!std::isprint(c))
+			return (false);
+	}
+	return (true);
+}
+
 std::string	normalizeCommand(std::string input)
 {
 	if (input.empty())
 		return ("");
-
-	if (input[0] == '/' || input[0] == '\\' || input[0] == ' ')
-		input = input.substr(1);
 
 	std::transform(input.begin(), input.end(), input.begin(), ::toupper);
 	return (input);
