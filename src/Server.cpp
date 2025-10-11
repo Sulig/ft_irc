@@ -6,14 +6,13 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 20:37:17 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/11 17:27:39 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/Server.hpp"
+# include "inc/Client.hpp"
 # include "inc/utils.hpp"
-#include <cstddef>
-#include <sstream>
 
 /* Constructor & destructor */
 void	Server::startServerVars(void)
@@ -161,7 +160,7 @@ void	Server::addNewClient()
 		_clients[new_client.fd]->setPos(_fds.size() - 1);
 
 		std::cout << CCR << "New Client connected, with FD = " << new_client.fd << DEF << std::endl;
-		sendWelcome(new_client.fd);
+		sendMessageTo(new_client.fd, sendWelcome(new_client.fd));
 		return ;
 	}
 	catch (const std::exception& e)
@@ -180,33 +179,6 @@ void	Server::handleClientWrite(int client_fd)
 		handleClientExit(_clients[client_fd]->getPos(), client_fd);
 	else if (result >= 0 && _clients[client_fd]->getSendBuffer().empty())
 		_fds[_clients[client_fd]->getPos()].events = POLLIN;
-}
-
-void	Server::sendWelcome(int client_fd)
-{
-	if (_clients.find(client_fd) == _clients.end())
-		return ;
-	std::string welcome = std::string(CWR);
-	welcome += "* [###########################] *\r\n";
-	welcome += "* \\          WELCOME          / *\r\n";
-	welcome += "*  [#########################]  *\r\n";
-	if (_clients[client_fd]->getIsLogged())
-	{
-		Client *client = _clients[client_fd];
-		welcome += ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
-		welcome += ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
-		welcome += ":This server was created on: " + getCreationTime() + "\r\n";
-		_clients[client_fd]->setIsWelcomeSend(true);
-	}
-	else
-	{
-		welcome += std::string(CY) + "\n> You're not registered yet!\r\n";
-		welcome += "> You must register first using the PASS & NICK commands.\r\n";
-		welcome += std::string(CC) + "* \\ Send HELP or /help for more info / *" + std::string(DEF) + "\r\n";
-	}
-	//Actualize the events of this client to send welcome
-	_fds[_clients[client_fd]->getPos()].events = POLLIN | POLLOUT;
-	_clients[client_fd]->setSendBuffer(welcome);
 }
 
 void	Server::sendMessageTo(int client_fd, std::string message)
@@ -243,7 +215,7 @@ void	Server::handleClientExit(size_t pos, int client_fd)
 			return ;
 		}
 	}
-	//todo -> set proper farewell }[vP]
+	//todo -> set proper farewell }[vP] ?
 	std::cout << CP << client_fd << " |Tv]// Come back soon!" << DEF << std::endl;
 
 	close(client_fd);
@@ -315,10 +287,13 @@ void	Server::processClientMsg(int client_fd)
 	else if (buffer.find_first_of("\r\n") == std::string::npos)
 		return ;
 
+	if (buffer[0] == '/' || buffer[0] == '\\' || buffer[0] == ' ')
+		buffer = buffer.substr(1);
+
 	_clients[client_fd]->setBuffer(buffer);
 	buffer = normalizeCommand(buffer);
 	identifyCMD(buffer, client_fd);
-	parseCommand(_clients[client_fd]->getBuffer(), client_fd);
+	parseArgs(_clients[client_fd]->getBuffer(), client_fd);
 	executeCMD(client_fd);
 	_clients[client_fd]->setBuffer("");
 	_clients[client_fd]->clearArgs();
@@ -345,7 +320,7 @@ size_t	Server::identifyCMD(std::string cmd, int client_fd)
 	_clients[client_fd]->setCommand(-1);
 	for (size_t i = 0; i < _commands.size(); i++)
 	{
-		size_t	found = cmd.find(_commands[i], 0);
+		size_t	found = cmd.find(_commands[i]);
 		if (found != std::string::npos)
 		{
 			_clients[client_fd]->setCommand(i);
@@ -358,12 +333,13 @@ size_t	Server::identifyCMD(std::string cmd, int client_fd)
 	return (_clients[client_fd]->getCommand());
 }
 
-/*
-void	Server::parseCommand(std::string input, int client_fd)
+void	Server::parseArgs(std::string input, int client_fd)
 {
 	std::vector<std::string>	args;
 	size_t	pos = 0, last = 0;
 
+	if (input.find("\n") != std::string::npos)
+		input = input.substr(0, input.find("\n"));
 	while (pos < input.size())
 	{
 		pos = input.find_first_not_of(' ', pos);
@@ -374,38 +350,18 @@ void	Server::parseCommand(std::string input, int client_fd)
 				args.push_back(input.substr(pos + 1));
 				break ;
 			}
-			last = input.find_first_not_of(' ', pos);
+			last = input.find_first_of(' ', pos);
 			if (last >= input.size())
 				last = input.size() - 1;
+			else
+				last--;
 			args.push_back(input.substr(pos, last));
+			pos = last + 1;
 		}
 	}
 	_clients[client_fd]->setAgrs(args);
 	_clients[client_fd]->setBuffer("");
 }
-*/
-/**/
-void	Server::parseCommand(std::string input, int client_fd)
-{
-	std::vector<std::string>	args;
-	std::istringstream iss(input);
-	std::string token;
-
-	while (iss >> token)
-	{
-		if (token[0] == ':')
-		{
-			std::string rest;
-			std::getline(iss, rest);
-			args.push_back(token.substr(1) + rest);
-			break ;
-		}
-		args.push_back(token);
-	}
-	_clients[client_fd]->setAgrs(args);
-	_clients[client_fd]->setBuffer("");
-}
-/**/
 
 void	Server::executeCMD(int client_fd)
 {
@@ -414,7 +370,7 @@ void	Server::executeCMD(int client_fd)
 	Client *client = _clients[client_fd];
 	std::vector<std::string> tmp = client->getAgrs();
 	std::string help = std::string(DEF);
-	std::cout << client_fd << "| want to: " << itoa(_clients[client_fd]->getCommand()) << std::endl;
+	//std::cout << client_fd << "| want to: " << itoa(_clients[client_fd]->getCommand()) << std::endl;
 	if (!client->getIsLogged())
 	{
 		if (client->getCommand() != 0 && client->getCommand() != 1)
@@ -425,24 +381,40 @@ void	Server::executeCMD(int client_fd)
 		else if (client->getCommand() == 1)
 			help += pass(_clients[client_fd]->getAgrs()[0], client_fd);
 		else
-			help += helpMe(0, false);
+			help += helpMe(0, client_fd);
 		sendMessageTo(client_fd, help);
+		return ;
+	}
+	if (!client->getIsRegistered())
+	{
+		switch (client->getCommand())
+		{
+			case 0: sendMessageTo(client_fd, helpMe(0, client_fd)); break ;
+			case 1: sendMessageTo(client_fd, pass(tmp[0], client_fd)); break;
+			case 2: sendMessageTo(client_fd, nick(client_fd)); break;
+			case 3: sendMessageTo(client_fd, user(client_fd)); break;
+			case 14: sendMessageTo(client_fd, clear()); break;
+		default:
+			std::string help = std::string(CR) + ":You don't have the access to this command 'till you register OR This command don't exist." + std::string(DEF) + "\r\n";
+			sendMessageTo(client_fd, help);
+			break ;
+		}
 		return ;
 	}
 	switch (client->getCommand())
 	{
 		case 0:
 			if (tmp.empty())
-				sendMessageTo(client_fd, helpMe(0, true));
+				sendMessageTo(client_fd, helpMe(0, 1));
 			else
 			{
 				tmp[0] = normalizeCommand(tmp[0]);
-				sendMessageTo(client_fd, helpMe(identifyCMD(tmp[0], 0), true));
+				sendMessageTo(client_fd, helpMe(identifyCMD(tmp[0], 0), 1));
 			}
 		break ;
-
 		case 1: sendMessageTo(client_fd, pass(tmp[0], client_fd)); break;
 		case 2: sendMessageTo(client_fd, nick(client_fd)); break;
+		case 3: sendMessageTo(client_fd, user(client_fd)); break;
 
 		case 14: sendMessageTo(client_fd, clear()); break;
 		case 15: sendMessageTo(client_fd, serverStatus()); break;
@@ -457,21 +429,35 @@ void	Server::executeCMD(int client_fd)
 
 #pragma region COMMANDS
 
-std::string	Server::helpMe(size_t helpWith, bool is_logged)
+std::string	Server::sendWelcome(int client_fd)
 {
-	std::string	help = std::string(CWR);
-	if (!is_logged)
+	if (_clients.find(client_fd) == _clients.end())
+		return ("");
+	std::string welcome = std::string(CWR);
+	welcome += "* [###########################] *\r\n";
+	welcome += "* \\          WELCOME          / *\r\n";
+	welcome += "*  [#########################]  *\r\n\n";
+	if (_clients[client_fd]->getIsRegistered())
 	{
-		help += "*  [#########################]  *\r\n";
-		help += "Thank you for using our server, to login follow this steps:\r\n";
-		help += std::string(CC) + " :STEP 1 - Use PASS command:\r\n";
-		help += helpMe(1, true);
-		help += std::string(CC) + " :STEP 2 - Use NICK and USER command:\r\n";
-		help += helpMe(2, true);
-		help += std::string(CC) + " :STEP 3 - Have fun!\r\n";
-		help += std::string(CP) + "If you need some help with a specific command, use HELP COMMAND" + std::string(DEF) + "\r\n";
+		Client *client = _clients[client_fd];
+		welcome += ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
+		welcome += ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
+		welcome += ":This server was created on: " + getCreationTime() + "\r\n" + std::string(DEF);
+		_clients[client_fd]->setIsWelcomeSend(true);
 	}
 	else
+	{
+		welcome += std::string(CY) + "> You're not registered yet!\r\n";
+		welcome += "> You must register first using the PASS & NICK commands.\r\n";
+		welcome += std::string(CC) + "* \\ Send HELP or /help for more info / *" + std::string(DEF) + "\r\n";
+	}
+	return (welcome);
+}
+
+std::string	Server::helpMe(size_t helpWith, int client_fd)
+{
+	std::string	help = std::string(CWR);
+	if (client_fd == 0 || client_fd == 1)
 	{
 		switch (helpWith)
 		{
@@ -496,9 +482,13 @@ std::string	Server::helpMe(size_t helpWith, bool is_logged)
 				break;
 
 			case 3:
-			help += "Correct usage: USER in-progress --not-implemented\r\n";
-			help += ":Set your nick and real username;\r\n";
-			help += "\t* Advice: Some characters are restricted!\r\n";
+			help += "Correct usage: USER username mode * :Real Name\r\n";
+			help += ":Set your username and Real Name;\r\n";
+			help += ":'mode' params accepted:\r\n";
+			help += "\t0 - deffault (nothing)\r\n";
+			help += "\t2 - \r\n";
+			help += "\t8 - invisible mode\r\n";
+			help += "\t* Advice: This must be used only once, so think your Real Name!\r\n";
 				break;
 
 			case 14: help += "So many messages? -> Clear your terminal;\r\n"; break;
@@ -513,6 +503,33 @@ std::string	Server::helpMe(size_t helpWith, bool is_logged)
 				break;
 		}
 	}
+	else
+	{
+		if (!(_clients[client_fd]->getIsLogged()))
+		{
+			help += "*  [#########################]  *\r\n";
+			help += "Thank you for using our server, to login follow this steps:\r\n";
+			help += std::string(CC) + " :STEP 1 - Use PASS command:\r\n";
+			help += helpMe(1, true);
+			help += std::string(CC) + " :STEP 2 - Use NICK command:\r\n";
+			help += helpMe(2, true);
+			help += std::string(CC) + " :STEP 3 - Use USER command:\r\n";
+			help += helpMe(3, true);
+			help += std::string(CC) + " :STEP 4 - Have fun!\r\n";
+			help += std::string(CP) + "If you need some help with a specific command, use HELP COMMAND" + std::string(DEF) + "\r\n";
+		}
+		else if (!(_clients[client_fd]->getIsRegistered()))
+		{
+			help += "*  [#########################]  *\r\n";
+			help += std::string(CG) + ":You're currently logged;\r\n" + std::string(DEF);
+			help += std::string(CP) + ":But you're not registered yet!\r\n" + std::string(DEF);
+			help += ":To register, you need to:\r\n";
+			if (_clients[client_fd]->getNick().empty())
+				help += "* Use NICK command!\r\n" + helpMe(2, true);
+			if (_clients[client_fd]->getUser().empty())
+				help += "* Use USER command!\r\n" + helpMe(3, true);
+		}
+	}
 	help += std::string(DEF);
 	return (help);
 }
@@ -524,11 +541,8 @@ std::string	Server::pass(std::string password, int client_fd)
 		return (std::string(CG) + "You're currently logged!\r\n" + std::string(CP) + "Maybe you wish to change your nick or send messages?\r\n" + std::string(DEF));
 	if (password == _pass)
 	{
-		help += std::string(CGR) + "-- CORRECT PASSWORD --\r\n";
-		help += std::string(CY) + " *Advice :Your nickname will be: " + itoa(_clients[client_fd]->getPos()) + "\r\n";
-		help += "To change it, use the NICK command" + std::string(CC) + " :Have fun! :)" + std::string(DEF) + "\r\n";
+		help += std::string(CGR) + "-- CORRECT PASSWORD --" + std::string(DEF) + "\r\n";
 		_clients[client_fd]->setIsLogged(true);
-		_clients[client_fd]->setNick(itoa(_clients[client_fd]->getPos()));
 	}
 	else
 		help += std::string(CRR) + "-- INCORRECT PASSWORD!! --" + std::string(DEF) + "\r\n";
@@ -560,10 +574,75 @@ std::string	Server::nick(int client_fd)
 	if (nick.find_first_of(NICK_MUST_NOT_CONTAIN) != std::string::npos)
 		return (std::string(CR) + ":Nickname must not contain: " + std::string(NICK_MUST_NOT_CONTAIN) + std::string(DEF) + "\r\n");
 
+	if (isAllPrintable(nick) == false)
+		return (std::string(CR) + ":Nickname must contain only printable chars!" + std::string(DEF) + "\r\n");
+
 	_clients[client_fd]->setNick(nick);
 	help += std::string(CG) + ":Nickname changed successfully to:" + nick + std::string(DEF) + "\r\n";
-	if (_clients[client_fd]->getUser().empty())
-		help += std::string(CG) + " *Don't forget to add a username to! (use USER)" + std::string(DEF) + "\r\n";
+	if (!(_clients[client_fd]->getUser().empty()))
+	{
+		_clients[client_fd]->setIsRegistered(true);
+		if (!(_clients[client_fd]->getIsWelcomeSend()))
+			help += sendWelcome(client_fd);
+	}
+	else
+		help += std::string(CP) + " *Don't forget to add a username to! (use USER)" + std::string(DEF) + "\r\n";
+	return (help);
+}
+
+std::string	Server::user(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getAgrs();
+
+	if (_clients[client_fd]->getIsRegistered())
+		return (std::string(CPR) + ":You're already registered!" + std::string(DEF) + "\r\n");
+
+	if (!(_clients[client_fd]->getUser().empty()))
+		return (std::string(CR) + ":You can't modify your username!" + std::string(DEF) + "\r\n");
+
+	if (args.empty())
+		return (std::string(CR) + ":No args given!" + std::string(DEF) + "\r\n");
+	if (args.size() < 4)
+		return (std::string(CR) + ":Need more parameters!\r\n" + std::string(CY) + " - Maybe you forget the '*'?" + std::string(DEF) + "\r\n");
+
+	//** USERNAME CHECKER */
+	std::string	username = args[0];
+
+	if (username.find_first_of(USER_MUST_NOT_CONTAIN) != std::string::npos)
+		return (std::string(CR) + ":Username must not contain: " + std::string(NICK_MUST_NOT_CONTAIN) + std::string(DEF) + "\r\n");
+
+	if (isAllPrintable(username) == false)
+		return (std::string(CR) + ":Username must contain only printable chars!" + std::string(DEF) + "\r\n");
+
+	_clients[client_fd]->setUser(username);
+	help += std::string(CG) + ":Username changed successfully to:" + username + std::string(DEF) + "\r\n";
+	//*** */
+
+	int	mode = atoi(args[1].c_str());
+	if (mode != MODE_DEF)
+	{
+		if (mode & MODE_W)
+			_clients[client_fd]->setUserModes(MODE_W);
+		if (mode & MODE_I)
+			_clients[client_fd]->setUserModes(MODE_I);
+	}
+
+	std::string	realName = args[3];
+	if (isAllPrintable(realName) == false)
+		return (std::string(CR) + ":Real Name must contain only printable chars!" + std::string(DEF) + "\r\n");
+
+	_clients[client_fd]->setRealName(realName);
+	help += std::string(CG) + ":Real Name changed successfully to:" + realName + std::string(DEF) + "\r\n";
+	if (!(_clients[client_fd]->getNick().empty()))
+	{
+		_clients[client_fd]->setIsRegistered(true);
+		if (!(_clients[client_fd]->getIsWelcomeSend()))
+			help += sendWelcome(client_fd);
+	}
+	else
+		help += std::string(CP) + " *Don't forget to add a nikname to! (use NICK)" + std::string(DEF) + "\r\n";
+
 	return (help);
 }
 

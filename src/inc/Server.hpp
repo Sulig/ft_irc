@@ -6,16 +6,14 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/09 17:53:24 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/11 17:17:40 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-# include "Client.hpp"
 # include "colors.hpp"
-
 
 # include <fcntl.h>
 # include <poll.h>
@@ -31,6 +29,9 @@
 # include <iostream>
 # include <cstring>
 # include <stdexcept>
+# include <cstddef>
+# include <sstream>
+# include <cstdlib>
 # include <cerrno>
 
 # define SERVER_NAME	"IRCSERV"
@@ -38,6 +39,7 @@
 # define BACKLOG		20	// Max X persons in conexion queque
 # define MAX_BITS_RD	512	// Max bits for reading
 
+class Client;
 class	Server
 {
 	private:
@@ -56,19 +58,20 @@ class	Server
 		void	readClientData(int client_fd, std::string store);
 		void	handleClientWrite(int client_fd);
 		void	handleClientExit(size_t pos, int client_fd);
-		void	sendWelcome(int client_fd);
 		void	sendMessageTo(int client_fd, std::string message);
 
 		/*-- PARSER --*/
 		void	processClientMsg(int client_fd);
 		size_t	identifyCMD(std::string cmd, int client_fd);
-		void	parseCommand(std::string input, int client_fd);
+		void	parseArgs(std::string input, int client_fd);
 		void	executeCMD(int client_fd);
 
 		/*	COMMANDS	*/
-		std::string	helpMe(size_t helpWith, bool is_logged);
+		std::string	sendWelcome(int client_fd);
+		std::string	helpMe(size_t helpWith, int client_fd);
 		std::string	pass(std::string password, int client_fd);
 		std::string	nick(int client_fd);
+		std::string	user(int client_fd);
 		std::string	clear(void);
 		std::string	serverStatus(void);
 
