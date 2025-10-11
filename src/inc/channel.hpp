@@ -80,6 +80,8 @@ class Channel
 
         // Serialización de modos (para RPL_CHANNELMODEIS)
         std::string modeString() const;     // p.ej. "+itkl 10 clave"
+
+        
 };
 
 
@@ -96,6 +98,14 @@ Eficiencia: no duplicamos std::string innecesariamente.
 /*
 Channel representa un canal, obviamente, en irc, y los canales tienen JOIN (unirse),
 part, TOPIC, MODE, INVITE, KICK Y QUIT. Los pondre en channel_cmds
+*/
+
+/*
+Ternarios si se te olvida: condición ? valor_si_true : valor_si_false
+if (condición)
+    return valor_si_true;
+else
+    return valor_si_false;
 */
 
 #endif

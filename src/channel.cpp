@@ -178,7 +178,7 @@ void Channel::broadcast(const std::map<int, Client*>& clients, const std::string
             continue;
 
         Client* c = iter->second;
-        c->appendToSendBuffer(raw);
+        c->appendToSendBuffer(raw); // mirar problema ?
     }
 }
 
@@ -195,7 +195,7 @@ void Channel::broadcastExcept(const std::map<int, Client*>& clients, Client* exc
         if (c == except) // saltar al emisor
             continue;
 
-        c->appendToSendBuffer(raw);
+        c->appendToSendBuffer(raw); // mirar problema ?
     }
 }
 
