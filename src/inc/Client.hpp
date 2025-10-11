@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/10 14:16:10 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/11 16:43:51 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,10 @@
 # define	NICK_MAX_CHARS			9
 # define	NICK_MUST_NOT_CONTAIN	" ,*?!@.;"
 # define	NICK_MUST_NOT_STARTWITH	"$:#&~"
+
+/*	USER RULES	*/
+# define	USER_MUST_NOT_CONTAIN	" :"
+
 
 /*	CLIENT MODES	*/
 # define	MODE_DEF	0x00
