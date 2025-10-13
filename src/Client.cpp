@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 14:24:33 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 16:39:13 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,8 @@
 # include "inc/Server.hpp"
 
 /* Constructor & destructor */
-Client::Client()	{	_fd = 0; _is_logged = false;	}
-Client::Client(int fd)	{	this->_fd = fd; _is_logged = false;	}
+Client::Client()		{	memset(this, 0, sizeof(Client));					}
+Client::Client(int fd)	{	memset(this, 0, sizeof(Client)); this->_fd = fd;	}
 Client::~Client()	{}
 /* ----- */
 

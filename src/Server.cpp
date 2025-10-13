@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 14:40:38 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 17:16:31 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -288,7 +288,7 @@ void	Server::processClientMsg(int client_fd)
 	else if (buffer.find_first_of("\r\n") == std::string::npos)
 		return ;
 
-	if (buffer[0] == '/' || buffer[0] == '\\' || buffer[0] == ' ')
+	while (buffer[0] == '/' || buffer[0] == '\\' || buffer[0] == ' ')
 		buffer = buffer.substr(1);
 
 	_clients[client_fd]->setBuffer(buffer);
@@ -443,7 +443,6 @@ std::string	Server::sendWelcome(int client_fd)
 	welcome += "* [###########################] *\r\n";
 	welcome += "* \\          WELCOME          / *\r\n";
 	welcome += "*  [#########################]  *\r\n\n";
-	std::cout << client_fd << "| Sended welcome" << std::endl;
 	if (_clients[client_fd]->getIsRegistered())
 	{
 		Client *client = _clients[client_fd];
@@ -661,6 +660,7 @@ std::string	Server::user(int client_fd)
 	return (help);
 }
 
+#pragma region PING - PONG
 std::string	Server::ping(int client_fd)
 {
 	std::string	help = std::string(DEF);
@@ -711,7 +711,6 @@ void	Server::ping_pong(int client_fd)
 		}
 		return ;
 	}
-
 	time_t	last_activity = _clients[client_fd]->getLastActivity();
 	if (now - last_activity > PING_INTERV)
 		pingClient(client_fd);
@@ -740,6 +739,8 @@ std::string	Server::pong(int client_fd)
 	help.clear();
 	return (help);
 }
+
+#pragma endregion PING - PONG
 
 std::string	Server::clear(void) {	return (std::string(CLEAN));	}
 std::string	Server::serverStatus(void)
