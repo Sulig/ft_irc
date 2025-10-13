@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/11 17:17:40 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 14:30:33 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,10 +34,12 @@
 # include <cstdlib>
 # include <cerrno>
 
-# define SERVER_NAME	"IRCSERV"
-# define VERSION		"v.0.1"
-# define BACKLOG		20	// Max X persons in conexion queque
-# define MAX_BITS_RD	512	// Max bits for reading
+# define SERVER_NAME	"IRCSERV"	// Server name
+# define VERSION		"v.0.1"		// Server version
+# define BACKLOG		20			// Max X persons in conexion queque
+# define MAX_BITS_RD	512			// Max bits for reading
+# define PING_INTERV	120			// x sec. Interval for PING
+# define PING_TIMEOUT	60			// x sec. Timeout if client don't respond to PING
 
 class Client;
 class	Server
@@ -46,12 +48,16 @@ class	Server
 		int							_port;
 		int							_server_fd;
 		std::string					_pass;
+		std::string					_pong;
 		std::vector<pollfd>			_fds;
 		std::map<int, Client*>		_clients;
 		std::vector<std::string>	_commands;
 
 		void	startServerVars(void);
 		void	serverLoop(void);
+
+		void	pingClient(int client_fd);
+		void	ping_pong(int client_fd);
 
 		/*-- CLIENT HANDLER --*/
 		void	addNewClient();
@@ -72,6 +78,8 @@ class	Server
 		std::string	pass(std::string password, int client_fd);
 		std::string	nick(int client_fd);
 		std::string	user(int client_fd);
+		std::string	ping(int client_fd);
+		std::string	pong(int client_fd);
 		std::string	clear(void);
 		std::string	serverStatus(void);
 

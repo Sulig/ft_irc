@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/11 17:27:39 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 14:40:38 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,6 +130,7 @@ void	Server::serverLoop(void)
 			// Client has disconnected
 			if (_fds[i].revents & POLLHUP)
 				handleClientExit(i, _fds[i].fd);
+			ping_pong(_fds[i].fd);
 		}
 	}
 }
@@ -383,6 +384,7 @@ void	Server::executeCMD(int client_fd)
 		else
 			help += helpMe(0, client_fd);
 		sendMessageTo(client_fd, help);
+		_clients[client_fd]->setLastActivity(time(NULL));
 		return ;
 	}
 	if (!client->getIsRegistered())
@@ -399,6 +401,7 @@ void	Server::executeCMD(int client_fd)
 			sendMessageTo(client_fd, help);
 			break ;
 		}
+		_clients[client_fd]->setLastActivity(time(NULL));
 		return ;
 	}
 	switch (client->getCommand())
@@ -416,6 +419,8 @@ void	Server::executeCMD(int client_fd)
 		case 2: sendMessageTo(client_fd, nick(client_fd)); break;
 		case 3: sendMessageTo(client_fd, user(client_fd)); break;
 
+		case 12: sendMessageTo(client_fd, ping(client_fd)); break;
+		case 13: sendMessageTo(client_fd, pong(client_fd)); break;
 		case 14: sendMessageTo(client_fd, clear()); break;
 		case 15: sendMessageTo(client_fd, serverStatus()); break;
 		default:
@@ -423,6 +428,7 @@ void	Server::executeCMD(int client_fd)
 			sendMessageTo(client_fd, help);
 			break ;
 	}
+	_clients[client_fd]->setLastActivity(time(NULL));
 }
 
 #pragma endregion PARSER
@@ -437,6 +443,7 @@ std::string	Server::sendWelcome(int client_fd)
 	welcome += "* [###########################] *\r\n";
 	welcome += "* \\          WELCOME          / *\r\n";
 	welcome += "*  [#########################]  *\r\n\n";
+	std::cout << client_fd << "| Sended welcome" << std::endl;
 	if (_clients[client_fd]->getIsRegistered())
 	{
 		Client *client = _clients[client_fd];
@@ -491,6 +498,14 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 			help += "\t* Advice: This must be used only once, so think your Real Name!\r\n";
 				break;
 
+			case 12:
+			help += "Correct usage: PING token\r\n";
+			help += ":Send \"PING\" to the server (checks if SERVER is still connected);\r\n";
+				break;
+			case 13:
+			help += "Correct usage: PONG token\r\n";
+			help += ":Send \"PONG\" to the server (checks if YOU are still connected);\r\n";
+				break;
 			case 14: help += "So many messages? -> Clear your terminal;\r\n"; break;
 			case 15: help += "Print server status;"; break;
 
@@ -643,6 +658,86 @@ std::string	Server::user(int client_fd)
 	else
 		help += std::string(CP) + " *Don't forget to add a nikname to! (use NICK)" + std::string(DEF) + "\r\n";
 
+	return (help);
+}
+
+std::string	Server::ping(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getAgrs();
+
+	if (args.empty())
+		return (std::string(CR) + ":Args not given!" + std::string(DEF) + "\r\n");
+
+	help += std::string(CWR) + "9\\ * PING - \"" + args[0] + "\" - Recieved from: |" + itoa(client_fd) + "|";
+	help += ", alias \"" + _clients[client_fd]->getNick() + "\"\r\n" + std::string(DEF);
+
+	std::cout << help;
+	help = std::string(CWR) + "- \"" + args[0] + "\" - */P PONG!\r\n" + std::string(DEF);
+	return (help);
+}
+
+void	Server::pingClient(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	if (_clients[client_fd]->getIsPongWaiting())
+		return ;
+
+	_pong = itoa(rand());
+	std::string help = std::string(CWR) + "9\\ * PING - \"" + _pong + "\" -\r\n" + std::string(DEF);
+	std::cout << "Sended a PING to: " << client_fd << "with -" << _pong << std::endl;
+	_clients[client_fd]->setIsPongSent(false);
+	_clients[client_fd]->setIsPongWaiting(true);
+	_clients[client_fd]->setLastPingSent(time(NULL));
+	sendMessageTo(client_fd, help);
+}
+
+void	Server::ping_pong(int client_fd)
+{
+	time_t	now = time(NULL);
+
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	if (!_clients[client_fd]->getIsRegistered())
+		return ;
+	if (_clients[client_fd]->getIsPongWaiting())
+	{
+		time_t	last_ping = _clients[client_fd]->getLastPingSent();
+		if (now - last_ping > PING_TIMEOUT)
+		{
+			std::string	help = std::string(CYR) + itoa(client_fd) + " ** TIMEOUT!! - Desconecting..\r\n" + std::string(CYR);
+			handleClientExit(_clients[client_fd]->getPos(), client_fd);
+		}
+		return ;
+	}
+
+	time_t	last_activity = _clients[client_fd]->getLastActivity();
+	if (now - last_activity > PING_INTERV)
+		pingClient(client_fd);
+}
+
+std::string	Server::pong(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getAgrs();
+
+	if (args.empty())
+		return (std::string(CR) + ":Args not given!" + std::string(DEF) + "\r\n");
+	if (args[0] != _pong)
+		return (std::string(CR) + ":Invalid PONG token!" + std::string(DEF) + "\r\n");
+	if (_clients[client_fd]->getIsPongSent())
+		return (std::string(CY) + ":Alredy sent a PONG. Wait for next PING..." + std::string(DEF) + "\r\n");
+
+	_clients[client_fd]->setIsPongWaiting(false);
+	_clients[client_fd]->setIsPongSent(true);
+	_clients[client_fd]->setLastPongSent(time(NULL));
+
+	help += std::string(CWR) + "|" + itoa(client_fd) + "|";
+	help += ", alias \"" + _clients[client_fd]->getNick() + "\"";
+	help += "- \"" + args[0] + "\" - */P PONG!\r\n" + std::string(DEF);
+	std::cout << help;
+	help.clear();
 	return (help);
 }
 
