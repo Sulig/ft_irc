@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/08 13:16:44 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/10 14:17:20 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,20 +22,30 @@ Client::~Client()	{}
 /*	GETTERS	&&	SETTERS*/
 size_t	Client::getPos(void)	{	return (this->_pos);	}
 bool	Client::getIsLogged(void)	{	return (this->_is_logged);	}
+bool	Client::getIsRegistered(void)	{	return (this->_is_registered);	}
 bool	Client::getIsWelcomeSend(void)	{	return (this->_is_welcomeSend);	}
 std::string	Client::getBuffer(void)	{	return (this->_buffer);	}
 std::string	Client::getSendBuffer(void)	{	return (this->_sendbuffer);	}
 std::string	Client::getNick(void)	{	return (this->_nick);	}
+std::string	Client::getUser(void)	{	return (this->_user);	}
+std::string	Client::getRealName(void)	{	return (this->_realname);	}
+
+int		Client::getUserModes(void)	{	return (this->_userModes);	}
 
 int		Client::getCommand(void)	{	return (this->_command);	}
 std::vector<std::string>	Client::getAgrs(void)	{	return (this->_args);	}
 
 void	Client::setPos(size_t pos)	{	this->_pos = pos;	}
 void	Client::setIsLogged(bool logged)	{	this->_is_logged = logged;	}
+void	Client::setIsRegistered(bool registerMe)	{	this->_is_registered = registerMe;	}
 void	Client::setIsWelcomeSend(bool welcome)	{	this->_is_welcomeSend = welcome;	}
 void	Client::setBuffer(std::string buffer)	{	this->_buffer = buffer;	}
 void	Client::setSendBuffer(std::string _send)	{	this->_sendbuffer = _send;	}
 void	Client::setNick(std::string nick)	{	this->_nick = nick;	}
+void	Client::setUser(std::string user)	{	this->_user = user;	}
+void	Client::setRealName(std::string name)	{	this->_realname = name;	}
+
+void	Client::setUserModes(int modes)	{	_userModes |= modes;	}
 
 void	Client::setCommand(int command)	{	this->_command = command;	}
 void	Client::setAgrs(std::vector<std::string> args)	{	this->_args = args;	}
@@ -43,6 +53,7 @@ void	Client::setAgrs(std::vector<std::string> args)	{	this->_args = args;	}
 
 /*	/=/	*/
 void	Client::appendToSendBuffer(std::string _send){	_sendbuffer += _send;	}
+void	Client::clearArgs(void){	_args.clear();	}
 
 int	Client::sendPendingData(void)
 {
