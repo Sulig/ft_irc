@@ -1,11 +1,219 @@
-#include "channel_cmds.hpp"
+#include "inc/channel_plural.hpp"
+#include "inc/helpers.hpp"
+#include "inc/Client.hpp"
+
+// Small helpers
+static std::string nickOrStar(Client* c) { return c ? c->getNick() : "*"; } // devuelve Nick del cliente si c != NULL
+static std::string prefixOf(Client* c) { return ":" + nickOrStar(c) + "!" + nickOrStar(c) + "@localhost"; } // Crea la “cabecera” (prefijo) de un mensaje IRC, con el formato estándar ":nick!nick@localhost"
+
+
+
+/* PART: PART <#chan> [<message>] */
+void handlePART(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client*     me = getClientFd(irc, fd);
+    std::string chName;
+    Channel*    ch;
+    std::string partMsg;
+    std::string raw;
+
+    if (!me)
+        return;
+    if (params.empty())
+    {
+        sendRawFd(fd, ":server 461 " + nickOrStar(me) + " PART :Not enough parameters\r\n");
+        return;
+    }
+
+    chName = params[0];
+    if (!isChannelName(chName))
+        chName = "#" + chName;
+
+    ch = chans.find(chName);
+    if (!ch || !ch->has(fd))
+    {
+        sendRawFd(fd, ":server 442 " + me->getNick() + " " + chName + " :You're not on that channel\r\n");
+        return;
+    }
+
+    partMsg = (params.size() >= 2 ? params[1] : std::string());
+    raw = prefixOf(me) + " PART " + chName + (partMsg.empty()?"":" :"+partMsg) + "\r\n";
+    ch->broadcast(*irc.clients, raw);
+    ch->remove(fd);
+    chans.eraseIfEmpty(chName);
+}
 
 
 
 
 
+/* INVITE: INVITE <nick> <#chan> */
+void handleINVITE(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client*             me = getClientFd(irc, fd);
+    std::string         chName;
+    Channel*            ch;
+    Client*             target;
+    int                 targetFd;
+    // var const llamada nick
+
+    if (!me)
+        return;
+    if (params.size() < 2)
+    {
+        sendRawFd(fd, ":server 461 " + me->getNick() + " INVITE :Not enough parameters\r\n");
+        return;
+    }
+
+    const std::string nick = params[0];
+    chName = params[1];
+    if (!isChannelName(chName))
+        chName = "#" + chName;
+
+    ch = chans.find(chName);
+    if (!ch)
+    {
+        sendRawFd(fd, ":server 403 " + me->getNick() + " " + chName + " :No such channel\r\n");
+        return;
+    }
+    if (!ch->has(fd))
+    {
+        sendRawFd(fd, ":server 442 " + me->getNick() + " " + chName + " :You're not on that channel\r\n");
+        return;
+    }
+    if (ch->modeI() && !ch->isOp(fd))
+    {
+        sendRawFd(fd, ":server 482 " + me->getNick() + " " + chName + " :You're not channel operator\r\n");
+        return;
+    }
+
+    // Find target client by nick
+    target = 0;
+    targetFd = -1;
+    if (irc.clients)
+    {
+        for (std::map<int, Client*>::const_iterator it=irc.clients->begin(); it!=irc.clients->end(); ++it)
+        {
+            if (it->second && it->second->getNick() == nick)
+            {
+                target = it->second;
+                targetFd = it->first;
+                break;
+            }
+        }
+    }
+    if (!target)
+    {
+        sendRawFd(fd, ":server 401 " + me->getNick() + " " + nick + " :No such nick/channel\r\n");
+        return;
+    }
+    if (ch->has(targetFd))
+    {
+        sendRawFd(fd, ":server 443 " + me->getNick() + " " + nick + " " + chName + " :is already on channel\r\n");
+        return;
+    }
+
+    ch->inviteNick(nick);
+
+    // Notify inviter (341) & send INVITE to target
+    sendRawFd(fd, ":server 341 " + me->getNick() + " " + nick + " " + chName + "\r\n");
+    std::string raw = prefixOf(me) + " INVITE " + nick + " :" + chName + "\r\n";
+    sendRawFd(targetFd, raw);
+}
 
 
+
+
+/* QUIT: QUIT [:message]  (we receive already-parsed quitMsg) */
+void handleQUIT(t_irc& irc, Channels& chans, int fd, const std::string& quitMsg)
+{
+    Client*     me = getClientFd(irc, fd);
+    std::string raw;
+    if (!me)
+        return;
+
+    // Broadcast to every channel where this fd is present.
+    // Channels to do, sweep (removeClientEverywhere)
+    raw = prefixOf(me) + " QUIT" + (quitMsg.empty()?"":" :"+quitMsg) + "\r\n";
+
+    // we ask Channels to remove everywhere; inside, after each removal, you can
+    // call Channel::broadcastExcept(...), if keep Channel pointer before removing.
+    (void)raw; // to broadcast here, use `raw`.
+
+    chans.removeClientEverywhere(irc, fd);
+}
+
+
+
+
+
+/* KICK: KICK <#chan> <nick> [<comment>] */
+void handleKICK(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client*         me = getClientFd(irc, fd);
+    std::string     chName;
+    std::string     reason;
+    Channel*        ch;
+    Client*         target;
+    int             targetFd;
+
+    if (!me)
+        return;
+    if (params.size() < 2)
+    {
+        sendRawFd(fd, ":server 461 " + me->getNick() + " KICK :Not enough parameters\r\n");
+        return;
+    }
+
+    chName = params[0];
+    const std::string nick = params[1];
+    reason = (params.size() >= 3 ? params[2] : std::string());
+    if (!isChannelName(chName))
+        chName = "#" + chName;
+
+    ch = chans.find(chName);
+    if (!ch)
+    {
+        sendRawFd(fd, ":server 403 " + me->getNick() + " " + chName + " :No such channel\r\n");
+        return;
+    }
+    if (!ch->has(fd))
+    {
+        sendRawFd(fd, ":server 442 " + me->getNick() + " " + chName + " :You're not on that channel\r\n");
+        return;
+    }
+    if (!ch->isOp(fd))
+    {
+        sendRawFd(fd, ":server 482 " + me->getNick() + " " + chName + " :You're not channel operator\r\n");
+        return;
+    }
+
+    // Find target
+    target = 0;
+    targetFd = -1;
+    if (irc.clients)
+    {
+        for (std::map<int, Client*>::const_iterator it=irc.clients->begin(); it!=irc.clients->end(); ++it)
+        {
+            if (it->second && it->second->getNick() == nick)
+            {
+                target = it->second;
+                targetFd = it->first;
+                break;
+            }
+        }
+    }
+    if (!target || !ch->has(targetFd))
+    {
+        sendRawFd(fd, ":server 441 " + me->getNick() + " " + nick + " " + chName + " :They aren't on that channel\r\n");
+        return;
+    }
+
+    std::string raw = prefixOf(me) + " KICK " + chName + " " + nick + (reason.empty()?"":" :"+reason) + "\r\n";
+    ch->broadcast(*irc.clients, raw);
+    ch->remove(targetFd);
+    chans.eraseIfEmpty(chName);
+}
 
 
 

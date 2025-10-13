@@ -10,10 +10,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "irc_structs.hpp" // otros de channel, que no se te olvide NO hacer circulares raras
-
-struct t_client;   // viene de tu irc_structs.hpp
-struct t_irc;      // idem
+class Client;
 
 class Channel
 {
@@ -22,13 +19,13 @@ class Channel
         std::string           _topic;         // puede estar vacío
         std::vector<int>      _members;       // fds de los clientes
         std::set<int>         _operators;     // fds con privilegio +o
-        bool                  _mode_i;        // invite-only
-        bool                  _mode_t;        // solo ops pueden cambiar topic
-        bool                  _mode_k;        // canal protegido por clave
-        bool                  _mode_l;        // límite de usuarios
-        std::string           _key;           // clave si +k
-        std::size_t           _limit;         // límite si +l
-        std::set<std::string> _invitedNicks;  // nicks invitados (modo +i)
+        bool                  _mode_i;        // invite-only mode
+        bool                  _mode_t;        // solo ops pueden cambiar topic mode
+        bool                  _mode_k;        // canal protegido por clave mode
+        bool                  _mode_l;        // límite de usuarios mode
+        std::string           _key;           // clave si mode = +k
+        std::size_t           _limit;         // límite si mode = +l
+        std::set<std::string> _invitedNicks;  // nicks invitados (modo +i) nick = nickname
 
         Channel();                           // no permitido
         Channel(const Channel&);
@@ -77,12 +74,14 @@ class Channel
         bool  isInvited(const std::string& nick) const;
         void  clearInvite(const std::string& nick);
 
-        // Broadcast
-        void  broadcast(const t_irc& irc, const std::string& raw) const;
-        void  broadcastExcept(const t_irc& irc, int exceptFd, const std::string& raw) const;
+        // Broadcast, usuario hace algo (JOIN, PART...), miembros del canal deben enterarse.
+        void  broadcast(const std::map<int, Client*>& clients, const std::string& raw) const;
+        void  broadcastExcept(const std::map<int, Client*>& clients, Client* except, const std::string& raw) const;
 
         // Serialización de modos (para RPL_CHANNELMODEIS)
         std::string modeString() const;     // p.ej. "+itkl 10 clave"
+
+        
 };
 
 
@@ -99,6 +98,14 @@ Eficiencia: no duplicamos std::string innecesariamente.
 /*
 Channel representa un canal, obviamente, en irc, y los canales tienen JOIN (unirse),
 part, TOPIC, MODE, INVITE, KICK Y QUIT. Los pondre en channel_cmds
+*/
+
+/*
+Ternarios si se te olvida: condición ? valor_si_true : valor_si_false
+if (condición)
+    return valor_si_true;
+else
+    return valor_si_false;
 */
 
 #endif

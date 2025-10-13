@@ -1,4 +1,4 @@
-#include "channel_more.hpp"
+#include "inc/channel_plural.hpp"
 
 static std::string normName(const std::string& s)
 {
