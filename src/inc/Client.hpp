@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/11 16:43:51 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 14:23:53 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,6 @@
 
 /*	USER RULES	*/
 # define	USER_MUST_NOT_CONTAIN	" :"
-
 
 /*	CLIENT MODES	*/
 # define	MODE_DEF	0x00
@@ -49,6 +48,12 @@ class	Client
 		std::string	_realname;
 		int			_userModes;
 
+		time_t		_lastPingSent;
+		time_t		_lastPongSent;
+		time_t		_lastActivity;
+		bool		_isPongSent;
+		bool		_isPongWaiting;
+
 	public:
 		Client();
 		Client(int fd);
@@ -67,6 +72,12 @@ class	Client
 
 		int		getUserModes(void);
 
+		bool	getIsPongSent(void);
+		bool	getIsPongWaiting(void);
+		time_t	getLastPingSent(void);
+		time_t	getLastPongSent(void);
+		time_t	getLastActivity(void);
+
 		int		getCommand(void);
 		std::vector<std::string>	getAgrs(void);
 
@@ -82,6 +93,12 @@ class	Client
 		void	setRealName(std::string name);
 
 		void	setUserModes(int modes);
+
+		void	setIsPongSent(bool pong);
+		void	setIsPongWaiting(bool pong);
+		void	setLastPingSent(time_t time);
+		void	setLastPongSent(time_t time);
+		void	setLastActivity(time_t time);
 
 		void	setCommand(int command);
 		void	setAgrs(std::vector<std::string> args);
