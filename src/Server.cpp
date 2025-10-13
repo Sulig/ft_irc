@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 17:16:31 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 19:20:03 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,8 @@ void	Server::startServerVars(void)
 {
 	_port = 0;
 	_server_fd = 0;
+	_pass = "";
+	_pong = "";
 	_commands.push_back("HELP");
 	_commands.push_back("PASS");
 	_commands.push_back("NICK");
@@ -38,7 +40,17 @@ void	Server::startServerVars(void)
 }
 Server::Server(){	startServerVars();	}
 Server::Server(int port, std::string pass){	startServerVars(); startServer(port, pass);	}
-Server::~Server(){}
+Server::~Server()
+{
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+	{
+		close(it->first);
+		delete it->second;
+	}
+	_clients.clear();
+	if (_server_fd > 0)
+		close(_server_fd);
+}
 /* ----- */
 
 /*	/=/	*/
@@ -418,6 +430,7 @@ void	Server::executeCMD(int client_fd)
 		case 1: sendMessageTo(client_fd, pass(tmp[0], client_fd)); break;
 		case 2: sendMessageTo(client_fd, nick(client_fd)); break;
 		case 3: sendMessageTo(client_fd, user(client_fd)); break;
+		case 4: sendMessageTo(client_fd, privmsg(client_fd)); break;
 
 		case 12: sendMessageTo(client_fd, ping(client_fd)); break;
 		case 13: sendMessageTo(client_fd, pong(client_fd)); break;
@@ -495,6 +508,12 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 			help += "\t2 - \r\n";
 			help += "\t8 - invisible mode\r\n";
 			help += "\t* Advice: This must be used only once, so think your Real Name!\r\n";
+				break;
+
+			case 4:
+			help += "Correct usage: PRIVMSG sent_to :Message\r\n";
+			help += ":Send a private message to a destinatary;\r\n";
+			help += "\t* You can also send a message to a channel using '#' (Ej: PRIVMSG #group :Hello!)\r\n";
 				break;
 
 			case 12:
@@ -657,6 +676,41 @@ std::string	Server::user(int client_fd)
 	else
 		help += std::string(CP) + " *Don't forget to add a nikname to! (use NICK)" + std::string(DEF) + "\r\n";
 
+	return (help);
+}
+
+std::string	Server::privmsg(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getAgrs();
+
+	if (args.size() < 2)
+		return (std::string(CR) + ":Need more args!" + std::string(DEF) + "\r\n");
+
+	if (args[0][0] != '#')
+	{
+		for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+		{
+			if (args[0] == it->second->getNick())
+			{
+				sendMessageTo(it->first, args[1]);
+				return ("");
+			}
+		}
+		return (std::string(CR) + ":Nickname not found!" + std::string(DEF) + "\r\n");
+	}
+	else if (args[0].find_first_of("*?") != std::string::npos)
+	{
+		// permitir que solo los operadores usen wilcards..
+		return (std::string(CP) + ":Feature not added yet!" + std::string(DEF) + "\r\n");
+	}
+	else
+	{
+		//seach if channel exist in server
+		//get the <vector> || <map> of clients connected in this channel if encountered.
+		//send the msg for this clients
+		return (std::string(CP) + ":The channel feature is not implemented yet.." + std::string(DEF) + "\r\n"); // This is temporal.
+	}
 	return (help);
 }
 

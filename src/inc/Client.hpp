@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 14:23:53 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 19:17:58 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,11 +48,16 @@ class	Client
 		std::string	_realname;
 		int			_userModes;
 
+		//*	CHANNEL	*/
+
+		/*	PING - PONG	*/
 		time_t		_lastPingSent;
 		time_t		_lastPongSent;
 		time_t		_lastActivity;
 		bool		_isPongSent;
 		bool		_isPongWaiting;
+
+		void	clientStartVars(void);
 
 	public:
 		Client();
@@ -106,7 +111,7 @@ class	Client
 		//** */
 		void	appendToSendBuffer(std::string _send);
 		void	clearArgs(void);
-		int	sendPendingData(void);
+		int		sendPendingData(void);
 };
 
 #endif

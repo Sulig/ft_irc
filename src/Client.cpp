@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 16:39:13 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/13 19:16:52 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,8 +14,28 @@
 # include "inc/Server.hpp"
 
 /* Constructor & destructor */
-Client::Client()		{	memset(this, 0, sizeof(Client));					}
-Client::Client(int fd)	{	memset(this, 0, sizeof(Client)); this->_fd = fd;	}
+void	Client::clientStartVars(void)
+{
+	_fd = 0;
+	_is_logged = false;
+	_is_registered = false;
+	_is_welcomeSend = false;
+	_pos = 0;
+	_command = 0;
+	_buffer = "";
+	_sendbuffer = "";
+	_nick = "";
+	_user = "";
+	_realname = "";
+	_userModes = 0;
+	_lastPingSent = 0;
+	_lastPongSent = 0;
+	_lastActivity = 0;
+	_isPongSent = false;
+	_isPongWaiting = false;
+}
+Client::Client()		{	clientStartVars();					}
+Client::Client(int fd)	{	clientStartVars(); this->_fd = fd;	}
 Client::~Client()	{}
 /* ----- */
 
