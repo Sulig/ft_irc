@@ -107,3 +107,9 @@ int	Client::sendPendingData(void)
 		return (-2);
 }
 /* ----- */
+
+// channel_name
+void	Client::addChannel(const std::string& name)    {    channel_name.insert(name);    }
+void	Client::removeChannel(const std::string& name)    {    channel_name.erase(name);    }
+bool	Client::inChannel(const std::string& name) const    {    return channel_name.count(name) != 0;    }
+const	std::set<std::string>& Client::channels() const    {    return channel_name;    }

@@ -6,6 +6,71 @@
 static std::string nickOrStar(Client* c) { return c ? c->getNick() : "*"; } // devuelve Nick del cliente si c != NULL
 static std::string prefixOf(Client* c) { return ":" + nickOrStar(c) + "!" + nickOrStar(c) + "@localhost"; } // Crea la “cabecera” (prefijo) de un mensaje IRC, con el formato estándar ":nick!nick@localhost"
 
+void handlePRIVMSG(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client* me = getClientFd(irc, fd);
+    if (!me)
+        return;
+
+    if (params.size() < 2)
+    {
+        // ERR_NEEDMOREPARAMS (461)
+        sendRawFd(fd, ":server 461 " + (me->getNick().empty() ? "*" : me->getNick())
+                       + " PRIVMSG :Not enough parameters\r\n");
+        return;
+    }
+
+    std::string target = params[0];
+    std::string msg    = params[1];
+
+    // PRIVMSG a canal
+    if (isChannelName(target))
+    {
+        Channel* ch = chans.find(target[0] == '#' ? target : "#" + target);
+        if (!ch)
+        {
+            // ERR_NOSUCHCHANNEL (403)
+            sendRawFd(fd, ":server 403 " + me->getNick() + " " + target + " :No such channel\r\n");
+            return;
+        }
+        if (!ch->has(fd))
+        {
+            // ERR_NOTONCHANNEL (442)
+            sendRawFd(fd, ":server 442 " + me->getNick() + " " + ch->name() + " :You're not on that channel\r\n");
+            return;
+        }
+
+        // :nick!nick@localhost PRIVMSG #canal :mensaje
+        std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost"
+                        + " PRIVMSG " + ch->name() + " :" + msg + "\r\n";
+        ch->broadcastExcept(*irc.clients, me, raw);
+        return;
+    }
+
+    // PRIVMSG a nick: buscar en irc.clients sin helpers extra
+    int dstFd = -1;
+    for (std::map<int, Client*>::iterator it = irc.clients->begin(); it != irc.clients->end(); ++it)
+    {
+        Client* c = it->second;
+        if (c && c->getNick() == target)
+        {
+            dstFd = it->first;
+            break;
+        }
+    }
+    if (dstFd == -1)
+    {
+        // ERR_NOSUCHNICK (401)
+        sendRawFd(fd, ":server 401 " + me->getNick() + " " + target + " :No such nick/channel\r\n");
+        return;
+    }
+
+    // :nick!nick@localhost PRIVMSG nick :mensaje
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost"
+                    + " PRIVMSG " + target + " :" + msg + "\r\n";
+    sendRawFd(dstFd, raw);
+}
+
 
 
 /* PART: PART <#chan> [<message>] */
@@ -214,6 +279,9 @@ void handleKICK(t_irc& irc, Channels& chans, int fd, const std::vector<std::stri
     ch->remove(targetFd);
     chans.eraseIfEmpty(chName);
 }
+
+
+
 
 
 

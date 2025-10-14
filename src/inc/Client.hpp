@@ -15,6 +15,7 @@
 
 # include <string>
 # include <vector>
+#include <set> // channel_name
 
 /*	NICK RULES	*/
 # define	NICK_MAX_CHARS			9
@@ -32,6 +33,7 @@
 class	Client
 {
 	private:
+		std::set<std::string> channel_name; // añadido
 		int		_fd;
 		bool	_is_logged;
 		bool	_is_registered;
@@ -112,6 +114,12 @@ class	Client
 		void	appendToSendBuffer(std::string _send);
 		void	clearArgs(void);
 		int		sendPendingData(void);
+
+		// para channel_name
+		void	addChannel(const std::string& name);
+    	void	removeChannel(const std::string& name);
+		bool	inChannel(const std::string& name) const;
+    	const	std::set<std::string>& channels() const;
 };
 
 #endif
