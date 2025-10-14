@@ -5,3 +5,6 @@ Para hacer funcionar:
 nc 127.0.0.1 6667 // en T2
 PASS secreto      // en T2
 HELP              // te ensena la lista de cmds
+
+## Connectar con Irssi:
+/connect localhost 6667 word
