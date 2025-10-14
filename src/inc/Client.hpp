@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 19:17:58 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/14 18:06:37 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,7 +15,9 @@
 
 # include <string>
 # include <vector>
-#include <set> // channel_name
+# include <set>
+
+# include "utils.hpp"
 
 /*	NICK RULES	*/
 # define	NICK_MAX_CHARS			9
@@ -33,16 +35,16 @@
 class	Client
 {
 	private:
-		std::set<std::string> channel_name; // añadido
 		int		_fd;
 		bool	_is_logged;
 		bool	_is_registered;
 		bool	_is_welcomeSend;
 		size_t	_pos;
 
-		size_t	_command;
-		std::vector<std::string>	_args;
+		/*	COMMAND	*/
+		t_command				_actualcmd;
 
+		/*	CLIENT REGISTER VARS	*/
 		std::string	_buffer;
 		std::string	_sendbuffer;
 		std::string	_nick;
@@ -51,6 +53,7 @@ class	Client
 		int			_userModes;
 
 		//*	CHANNEL	*/
+		std::set<std::string>	channel_name;
 
 		/*	PING - PONG	*/
 		time_t		_lastPingSent;
@@ -85,8 +88,8 @@ class	Client
 		time_t	getLastPongSent(void);
 		time_t	getLastActivity(void);
 
-		int		getCommand(void);
-		std::vector<std::string>	getAgrs(void);
+		std::vector<std::string>	getActualCmdArgs(void);
+		t_command					getActualCommand(void);
 
 		/*	SETTERS	*/
 		void	setPos(size_t pos);
@@ -107,19 +110,17 @@ class	Client
 		void	setLastPongSent(time_t time);
 		void	setLastActivity(time_t time);
 
-		void	setCommand(int command);
-		void	setAgrs(std::vector<std::string> args);
+		void	setActualCommand(t_command cmd);
 
-		/** */
+		//** */
 		void	appendToSendBuffer(std::string _send);
-		void	clearArgs(void);
 		int		sendPendingData(void);
 
 		// para channel_name
 		void	addChannel(const std::string& name);
-    	void	removeChannel(const std::string& name);
+		void	removeChannel(const std::string& name);
 		bool	inChannel(const std::string& name) const;
-    	const	std::set<std::string>& channels() const;
+		const	std::set<std::string>& channels() const;
 };
 
 #endif

@@ -6,12 +6,15 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 19:16:52 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/14 18:09:13 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/Client.hpp"
-# include "inc/Server.hpp"
+
+# include <cerrno>
+# include <sys/socket.h>
+# include <bits/socket.h>
 
 /* Constructor & destructor */
 void	Client::clientStartVars(void)
@@ -21,7 +24,7 @@ void	Client::clientStartVars(void)
 	_is_registered = false;
 	_is_welcomeSend = false;
 	_pos = 0;
-	_command = 0;
+	_actualcmd.cmd_num = -1;
 	_buffer = "";
 	_sendbuffer = "";
 	_nick = "";
@@ -58,8 +61,8 @@ time_t	Client::getLastPingSent(void)	{	return (_lastPingSent);	}
 time_t	Client::getLastPongSent(void)	{	return (_lastPongSent);	}
 time_t	Client::getLastActivity(void)	{	return (_lastActivity);	}
 
-int		Client::getCommand(void)	{	return (this->_command);	}
-std::vector<std::string>	Client::getAgrs(void)	{	return (this->_args);	}
+std::vector<std::string>	Client::getActualCmdArgs(void)	{	return (this->_actualcmd.args);	}
+t_command					Client::getActualCommand(void)	{	return (this->_actualcmd);	}
 /* ----- */
 
 /*	SETTERS	*/
@@ -81,13 +84,11 @@ void	Client::setLastPingSent(time_t time)	{	_lastPingSent = time;	}
 void	Client::setLastPongSent(time_t time)	{	_lastPongSent = time;	}
 void	Client::setLastActivity(time_t time)	{	_lastActivity = time;	}
 
-void	Client::setCommand(int command)	{	this->_command = command;	}
-void	Client::setAgrs(std::vector<std::string> args)	{	this->_args = args;	}
+void	Client::setActualCommand(t_command cmd)	{	this->_actualcmd = cmd;	}
 /* ----- */
 
 /*	/=/	*/
 void	Client::appendToSendBuffer(std::string _send){	_sendbuffer += _send;	}
-void	Client::clearArgs(void){	_args.clear();	}
 
 int	Client::sendPendingData(void)
 {
@@ -109,7 +110,7 @@ int	Client::sendPendingData(void)
 /* ----- */
 
 // channel_name
-void	Client::addChannel(const std::string& name)    {    channel_name.insert(name);    }
-void	Client::removeChannel(const std::string& name)    {    channel_name.erase(name);    }
-bool	Client::inChannel(const std::string& name) const    {    return channel_name.count(name) != 0;    }
-const	std::set<std::string>& Client::channels() const    {    return channel_name;    }
+void	Client::addChannel(const std::string& name)			{	channel_name.insert(name);				}
+void	Client::removeChannel(const std::string& name)		{	channel_name.erase(name);				}
+bool	Client::inChannel(const std::string& name) const	{	return (channel_name.count(name) != 0);	}
+const	std::set<std::string>& Client::channels() const		{	return (channel_name);						}

@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/13 17:48:31 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/14 13:54:30 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 # define SERVER_HPP
 
 # include "colors.hpp"
+# include "utils.hpp"
 
 # include <fcntl.h>
 # include <poll.h>
@@ -68,14 +69,15 @@ class	Server
 
 		/*-- PARSER --*/
 		void	processClientMsg(int client_fd);
-		size_t	identifyCMD(std::string cmd, int client_fd);
-		void	parseArgs(std::string input, int client_fd);
-		void	executeCMD(int client_fd);
+		size_t	identifyCMD(std::string cmd);
+		std::vector<std::string>	parseArgs(std::string input);
+		void	executeCMD(int client_fd, t_command cmd);
 
 		/*	COMMANDS	*/
 		std::string	sendWelcome(int client_fd);
 		std::string	helpMe(size_t helpWith, int client_fd);
-		std::string	pass(std::string password, int client_fd);
+		std::string	cap(int client_fd);
+		std::string	pass(int client_fd);
 		std::string	nick(int client_fd);
 		std::string	user(int client_fd);
 		std::string	privmsg(int client_fd);
