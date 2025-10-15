@@ -11,3 +11,22 @@ USER + <username> + <mode> + <unused> :<realname>   // USER samanta 0 (mode pued
 
 ## Connectar con Irssi:
 /connect localhost 6667 word
+
+
+NORMAS PARA CHANNELS:
+
+Cada servidor puede tener muchos canales, y cada canal puede tener muchos usuarios.
+Los canales siempre empiezan con #.
+Los usuarios se unen con JOIN, salen con PART, hablan con PRIVMSG + #canal + msg ..., y los operadores pueden administrarlo (MODE, KICK, INVITE, etc.).
+Mirar channel.hpp para ver lo que almacena un chat, como se ve
+
+
+📌 Lo que pasa dentro del servidor (resumen):
+
+JOIN    ➝ busca canal ➝ crea si no existe ➝ añade miembro ➝ broadcast JOIN      
+PRIVMSG ➝ busca canal ➝ comprueba miembro ➝ broadcast mensaje                   ✓
+PART    ➝ elimina miembro ➝ broadcast PART ➝ borra canal si vacío               ✓
+MODE    ➝ cambia flags ➝ broadcast cambio                                       
+INVITE  ➝ marca nick como invitado ➝ envía notificación                         ✓
+KICK    ➝ elimina miembro ➝ broadcast KICK                                      ✓
+QUIT    ➝ elimina usuario de todos los canales ➝ broadcast QUIT                 ✓
