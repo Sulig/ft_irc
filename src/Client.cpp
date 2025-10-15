@@ -6,20 +6,43 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/10 14:17:20 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/14 18:09:13 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/Client.hpp"
-# include "inc/Server.hpp"
+
+# include <cerrno>
+# include <sys/socket.h>
+# include <bits/socket.h>
 
 /* Constructor & destructor */
-Client::Client()	{	_fd = 0; _is_logged = false;	}
-Client::Client(int fd)	{	this->_fd = fd; _is_logged = false;	}
+void	Client::clientStartVars(void)
+{
+	_fd = 0;
+	_is_logged = false;
+	_is_registered = false;
+	_is_welcomeSend = false;
+	_pos = 0;
+	_actualcmd.cmd_num = -1;
+	_buffer = "";
+	_sendbuffer = "";
+	_nick = "";
+	_user = "";
+	_realname = "";
+	_userModes = 0;
+	_lastPingSent = 0;
+	_lastPongSent = 0;
+	_lastActivity = 0;
+	_isPongSent = false;
+	_isPongWaiting = false;
+}
+Client::Client()		{	clientStartVars();					}
+Client::Client(int fd)	{	clientStartVars(); this->_fd = fd;	}
 Client::~Client()	{}
 /* ----- */
 
-/*	GETTERS	&&	SETTERS*/
+/*	GETTERS	*/
 size_t	Client::getPos(void)	{	return (this->_pos);	}
 bool	Client::getIsLogged(void)	{	return (this->_is_logged);	}
 bool	Client::getIsRegistered(void)	{	return (this->_is_registered);	}
@@ -32,9 +55,17 @@ std::string	Client::getRealName(void)	{	return (this->_realname);	}
 
 int		Client::getUserModes(void)	{	return (this->_userModes);	}
 
-int		Client::getCommand(void)	{	return (this->_command);	}
-std::vector<std::string>	Client::getAgrs(void)	{	return (this->_args);	}
+bool	Client::getIsPongSent(void)	{	return (_isPongSent);	}
+bool	Client::getIsPongWaiting(void)	{	return (_isPongWaiting);	}
+time_t	Client::getLastPingSent(void)	{	return (_lastPingSent);	}
+time_t	Client::getLastPongSent(void)	{	return (_lastPongSent);	}
+time_t	Client::getLastActivity(void)	{	return (_lastActivity);	}
 
+std::vector<std::string>	Client::getActualCmdArgs(void)	{	return (this->_actualcmd.args);	}
+t_command					Client::getActualCommand(void)	{	return (this->_actualcmd);	}
+/* ----- */
+
+/*	SETTERS	*/
 void	Client::setPos(size_t pos)	{	this->_pos = pos;	}
 void	Client::setIsLogged(bool logged)	{	this->_is_logged = logged;	}
 void	Client::setIsRegistered(bool registerMe)	{	this->_is_registered = registerMe;	}
@@ -47,13 +78,17 @@ void	Client::setRealName(std::string name)	{	this->_realname = name;	}
 
 void	Client::setUserModes(int modes)	{	_userModes |= modes;	}
 
-void	Client::setCommand(int command)	{	this->_command = command;	}
-void	Client::setAgrs(std::vector<std::string> args)	{	this->_args = args;	}
+void	Client::setIsPongSent(bool pong)	{	_isPongSent = pong;	}
+void	Client::setIsPongWaiting(bool pong)	{	_isPongWaiting = pong;	}
+void	Client::setLastPingSent(time_t time)	{	_lastPingSent = time;	}
+void	Client::setLastPongSent(time_t time)	{	_lastPongSent = time;	}
+void	Client::setLastActivity(time_t time)	{	_lastActivity = time;	}
+
+void	Client::setActualCommand(t_command cmd)	{	this->_actualcmd = cmd;	}
 /* ----- */
 
 /*	/=/	*/
 void	Client::appendToSendBuffer(std::string _send){	_sendbuffer += _send;	}
-void	Client::clearArgs(void){	_args.clear();	}
 
 int	Client::sendPendingData(void)
 {
@@ -73,3 +108,9 @@ int	Client::sendPendingData(void)
 		return (-2);
 }
 /* ----- */
+
+// channel_name
+void	Client::addChannel(const std::string& name)			{	channel_name.insert(name);				}
+void	Client::removeChannel(const std::string& name)		{	channel_name.erase(name);				}
+bool	Client::inChannel(const std::string& name) const	{	return (channel_name.count(name) != 0);	}
+const	std::set<std::string>& Client::channels() const		{	return (channel_name);						}

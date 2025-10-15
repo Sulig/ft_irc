@@ -6,19 +6,20 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/11 17:27:39 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/14 17:46:53 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/Server.hpp"
 # include "inc/Client.hpp"
-# include "inc/utils.hpp"
 
 /* Constructor & destructor */
 void	Server::startServerVars(void)
 {
 	_port = 0;
 	_server_fd = 0;
+	_pass = "";
+	_pong = "";
 	_commands.push_back("HELP");
 	_commands.push_back("PASS");
 	_commands.push_back("NICK");
@@ -35,10 +36,21 @@ void	Server::startServerVars(void)
 	_commands.push_back("PONG");
 	_commands.push_back("CLEAR");
 	_commands.push_back("STAT");
+	_commands.push_back("CAP");
 }
 Server::Server(){	startServerVars();	}
 Server::Server(int port, std::string pass){	startServerVars(); startServer(port, pass);	}
-Server::~Server(){}
+Server::~Server()
+{
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+	{
+		close(it->first);
+		delete it->second;
+	}
+	_clients.clear();
+	if (_server_fd > 0)
+		close(_server_fd);
+}
 /* ----- */
 
 /*	/=/	*/
@@ -130,6 +142,7 @@ void	Server::serverLoop(void)
 			// Client has disconnected
 			if (_fds[i].revents & POLLHUP)
 				handleClientExit(i, _fds[i].fd);
+			ping_pong(_fds[i].fd);
 		}
 	}
 }
@@ -287,53 +300,46 @@ void	Server::processClientMsg(int client_fd)
 	else if (buffer.find_first_of("\r\n") == std::string::npos)
 		return ;
 
-	if (buffer[0] == '/' || buffer[0] == '\\' || buffer[0] == ' ')
+	while (buffer[0] == '/' || buffer[0] == '\\' || buffer[0] == ' ')
 		buffer = buffer.substr(1);
 
 	_clients[client_fd]->setBuffer(buffer);
-	buffer = normalizeCommand(buffer);
-	identifyCMD(buffer, client_fd);
-	parseArgs(_clients[client_fd]->getBuffer(), client_fd);
-	executeCMD(client_fd);
+	while (buffer.find_first_of("\r\n") != std::string::npos)
+	{
+		std::string	line = buffer.substr(0, buffer.find_first_of("\r\n"));
+		buffer = buffer.substr(buffer.find("\n") + 1);
+
+		t_command	cmd;
+		cmd.cmd_num = identifyCMD(normalizeCommand(line));
+		if (!(cmd.cmd_num >= _commands.size()))
+			line = line.substr(_commands[cmd.cmd_num].size());
+		cmd.args = parseArgs(line);
+		_clients[client_fd]->setActualCommand(cmd);
+		executeCMD(client_fd, cmd);
+		//* Clean after using this command.
+		cmd.cmd_num = -1;
+		cmd.args.clear();
+		_clients[client_fd]->setActualCommand(cmd);
+	}
 	_clients[client_fd]->setBuffer("");
-	_clients[client_fd]->clearArgs();
 }
 /* ----- */
 #pragma endregion CLIENT HANDLER
 
 #pragma region PARSER
 
-size_t	Server::identifyCMD(std::string cmd, int client_fd)
+size_t	Server::identifyCMD(std::string cmd)
 {
-	if (client_fd == 0)
-	{
-		for (size_t i = 0; i < _commands.size(); i++)
-		{
-			size_t	found = cmd.find(_commands[i], 0);
-			if (found != std::string::npos)
-				return (i);
-		}
-		return (-1);
-	}
-	if (_clients.find(client_fd) == _clients.end())
-		return (-1);
-	_clients[client_fd]->setCommand(-1);
 	for (size_t i = 0; i < _commands.size(); i++)
 	{
-		size_t	found = cmd.find(_commands[i]);
+		size_t	found = cmd.find(_commands[i], 0);
 		if (found != std::string::npos)
-		{
-			_clients[client_fd]->setCommand(i);
-			found += _commands[i].size();
-			cmd = _clients[client_fd]->getBuffer().substr(found);
-			_clients[client_fd]->setBuffer(cmd);
-			break ;
-		}
+			return (i);
 	}
-	return (_clients[client_fd]->getCommand());
+	return (-1);
 }
 
-void	Server::parseArgs(std::string input, int client_fd)
+std::vector<std::string>	Server::parseArgs(std::string input)
 {
 	std::vector<std::string>	args;
 	size_t	pos = 0, last = 0;
@@ -351,78 +357,87 @@ void	Server::parseArgs(std::string input, int client_fd)
 				break ;
 			}
 			last = input.find_first_of(' ', pos);
-			if (last >= input.size())
-				last = input.size() - 1;
-			else
-				last--;
-			args.push_back(input.substr(pos, last));
+			if (last > input.size())
+				last = input.size();
+			args.push_back(input.substr(pos, last - pos));
 			pos = last + 1;
 		}
 	}
-	_clients[client_fd]->setAgrs(args);
-	_clients[client_fd]->setBuffer("");
+	return (args);
 }
 
-void	Server::executeCMD(int client_fd)
+void	Server::executeCMD(int client_fd, t_command cmd)
 {
 	if (_clients.find(client_fd) == _clients.end())
 		return ;
+	if (cmd.cmd_num >= _commands.size() && cmd.args.size() == 0)
+		return ;
+
 	Client *client = _clients[client_fd];
-	std::vector<std::string> tmp = client->getAgrs();
 	std::string help = std::string(DEF);
-	//std::cout << client_fd << "| want to: " << itoa(_clients[client_fd]->getCommand()) << std::endl;
+
 	if (!client->getIsLogged())
 	{
-		if (client->getCommand() != 0 && client->getCommand() != 1)
+		if (cmd.cmd_num != 0 && cmd.cmd_num != 1 && cmd.cmd_num != 16)
 		{
 			help += std::string(CR) + ":You're not logged yet!\r\n";
 			help += std::string(CY) + ":Use the command PASS to login!" + std::string(DEF) + "\r\n";
+			sendMessageTo(client_fd, help);
 		}
-		else if (client->getCommand() == 1)
-			help += pass(_clients[client_fd]->getAgrs()[0], client_fd);
-		else
-			help += helpMe(0, client_fd);
-		sendMessageTo(client_fd, help);
+		else if (cmd.cmd_num == 16)
+			sendMessageTo(client_fd, cap(client_fd));
+		else if (cmd.cmd_num == 0)
+			sendMessageTo(client_fd, helpMe(0, client_fd));
+		else if (cmd.cmd_num == 1)
+			sendMessageTo(client_fd, pass(client_fd));
+		_clients[client_fd]->setLastActivity(time(NULL));
 		return ;
 	}
 	if (!client->getIsRegistered())
 	{
-		switch (client->getCommand())
+		switch (cmd.cmd_num)
 		{
 			case 0: sendMessageTo(client_fd, helpMe(0, client_fd)); break ;
-			case 1: sendMessageTo(client_fd, pass(tmp[0], client_fd)); break;
+			case 1: sendMessageTo(client_fd, pass(client_fd)); break;
 			case 2: sendMessageTo(client_fd, nick(client_fd)); break;
 			case 3: sendMessageTo(client_fd, user(client_fd)); break;
 			case 14: sendMessageTo(client_fd, clear()); break;
+			case 16: sendMessageTo(client_fd, cap(client_fd)); break;
 		default:
 			std::string help = std::string(CR) + ":You don't have the access to this command 'till you register OR This command don't exist." + std::string(DEF) + "\r\n";
 			sendMessageTo(client_fd, help);
 			break ;
 		}
+		_clients[client_fd]->setLastActivity(time(NULL));
 		return ;
 	}
-	switch (client->getCommand())
+	switch (cmd.cmd_num)
 	{
 		case 0:
-			if (tmp.empty())
+			if (cmd.args.empty())
 				sendMessageTo(client_fd, helpMe(0, 1));
 			else
 			{
-				tmp[0] = normalizeCommand(tmp[0]);
-				sendMessageTo(client_fd, helpMe(identifyCMD(tmp[0], 0), 1));
+				cmd.args[0] = normalizeCommand(cmd.args[0]);
+				sendMessageTo(client_fd, helpMe(identifyCMD(cmd.args[0]), 1));
 			}
 		break ;
-		case 1: sendMessageTo(client_fd, pass(tmp[0], client_fd)); break;
+		case 1: sendMessageTo(client_fd, pass(client_fd)); break;
 		case 2: sendMessageTo(client_fd, nick(client_fd)); break;
 		case 3: sendMessageTo(client_fd, user(client_fd)); break;
+		case 4: sendMessageTo(client_fd, privmsg(client_fd)); break;
 
+		case 12: sendMessageTo(client_fd, ping(client_fd)); break;
+		case 13: sendMessageTo(client_fd, pong(client_fd)); break;
 		case 14: sendMessageTo(client_fd, clear()); break;
 		case 15: sendMessageTo(client_fd, serverStatus()); break;
+		case 16: sendMessageTo(client_fd, cap(client_fd)); break;
 		default:
 			std::string help = std::string(CR) + ":This command don't exist or is not implemented yet." + std::string(DEF) + "\r\n";
 			sendMessageTo(client_fd, help);
 			break ;
 	}
+	_clients[client_fd]->setLastActivity(time(NULL));
 }
 
 #pragma endregion PARSER
@@ -437,12 +452,13 @@ std::string	Server::sendWelcome(int client_fd)
 	welcome += "* [###########################] *\r\n";
 	welcome += "* \\          WELCOME          / *\r\n";
 	welcome += "*  [#########################]  *\r\n\n";
+	welcome += std::string(DEF);
 	if (_clients[client_fd]->getIsRegistered())
 	{
 		Client *client = _clients[client_fd];
-		welcome += ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
-		welcome += ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
-		welcome += ":This server was created on: " + getCreationTime() + "\r\n" + std::string(DEF);
+		welcome += ":" + std::string(SERVER_NAME) + "001" + client->getNick() + ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
+		welcome += ":" + std::string(SERVER_NAME) + "002" + client->getNick() + ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
+		welcome += ":" + std::string(SERVER_NAME) + "003" + client->getNick() + ":This server was created on: " + getCreationTime() + "\r\n" + std::string(DEF);
 		_clients[client_fd]->setIsWelcomeSend(true);
 	}
 	else
@@ -482,18 +498,33 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 				break;
 
 			case 3:
-			help += "Correct usage: USER username mode * :Real Name\r\n";
+			help += "Correct usage: USER username mode    *   :Real Name\r\n";
+			help += "Other usage:   USER username host server :Real Name\r\n";
 			help += ":Set your username and Real Name;\r\n";
 			help += ":'mode' params accepted:\r\n";
-			help += "\t0 - deffault (nothing)\r\n";
-			help += "\t2 - \r\n";
-			help += "\t8 - invisible mode\r\n";
 			help += "\t* Advice: This must be used only once, so think your Real Name!\r\n";
 				break;
 
+			case 4:
+			help += "Correct usage: PRIVMSG sent_to :Message\r\n";
+			help += ":Send a private message to a destinatary;\r\n";
+			help += "\t* You can also send a message to a channel using '#' (Ej: PRIVMSG #group :Hello!)\r\n";
+				break;
+
+			case 12:
+			help += "Correct usage: PING token\r\n";
+			help += ":Send \"PING\" to the server (checks if SERVER is still connected);\r\n";
+				break;
+			case 13:
+			help += "Correct usage: PONG token\r\n";
+			help += ":Send \"PONG\" to the server (checks if YOU are still connected);\r\n";
+				break;
 			case 14: help += "So many messages? -> Clear your terminal;\r\n"; break;
 			case 15: help += "Print server status;"; break;
-
+			case 16:
+			help += "Correct usage: CAP LS\r\n";
+			help += ":List server capabilities (none yet..);\r\n";
+				break;
 			default:
 				help += std::string(CR) + ":The command that are you searching for don't exist!\r\n";
 				help += std::string(DEF) + ":This are the supported commands:\r\n";
@@ -534,12 +565,32 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 	return (help);
 }
 
-std::string	Server::pass(std::string password, int client_fd)
+std::string	Server::cap(int client_fd)
 {
 	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
+
+	if (args.empty())
+		return (std::string(CR) + "CAP :No subcommand" + std::string(DEF) + "\r\n");
+	if (args[0].find("LS") != std::string::npos)
+		help += "CAP * LS:\r\n";
+	else
+		return (std::string(CR) + "CAP :Invalid subcommand" + std::string(DEF) + "\r\n");
+	return (help);
+}
+
+std::string	Server::pass(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
+
+	if (args.empty())
+		return (std::string(CR) + "Password not given!" + std::string(DEF) + "\r\n");
+
 	if (_clients[client_fd]->getIsLogged())
 		return (std::string(CG) + "You're currently logged!\r\n" + std::string(CP) + "Maybe you wish to change your nick or send messages?\r\n" + std::string(DEF));
-	if (password == _pass)
+
+	if (args[0] == _pass)
 	{
 		help += std::string(CGR) + "-- CORRECT PASSWORD --" + std::string(DEF) + "\r\n";
 		_clients[client_fd]->setIsLogged(true);
@@ -552,7 +603,7 @@ std::string	Server::pass(std::string password, int client_fd)
 std::string	Server::nick(int client_fd)
 {
 	std::string	help = std::string(DEF);
-	std::vector<std::string>	args = _clients[client_fd]->getAgrs();
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
 
 	if (args.empty())
 		return (std::string(CR) + ":Nickname not given!" + std::string(DEF) + "\r\n");
@@ -561,7 +612,7 @@ std::string	Server::nick(int client_fd)
 	if (nick.size() > NICK_MAX_CHARS)
 		return (std::string(CR) + ":Nickname is too long!" + std::string(DEF) + "\r\n");
 
-	if (!(identifyCMD(nick, 0) >= _commands.size()))
+	if (!(identifyCMD(nick) >= _commands.size()))
 		return (std::string(CR) + ":Nickname can't be one of the commands!" + std::string(DEF) + "\r\n");
 
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
@@ -593,7 +644,7 @@ std::string	Server::nick(int client_fd)
 std::string	Server::user(int client_fd)
 {
 	std::string	help = std::string(DEF);
-	std::vector<std::string>	args = _clients[client_fd]->getAgrs();
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
 
 	if (_clients[client_fd]->getIsRegistered())
 		return (std::string(CPR) + ":You're already registered!" + std::string(DEF) + "\r\n");
@@ -619,18 +670,9 @@ std::string	Server::user(int client_fd)
 	help += std::string(CG) + ":Username changed successfully to:" + username + std::string(DEF) + "\r\n";
 	//*** */
 
-	int	mode = atoi(args[1].c_str());
-	if (mode != MODE_DEF)
-	{
-		if (mode & MODE_W)
-			_clients[client_fd]->setUserModes(MODE_W);
-		if (mode & MODE_I)
-			_clients[client_fd]->setUserModes(MODE_I);
-	}
-
 	std::string	realName = args[3];
 	if (isAllPrintable(realName) == false)
-		return (std::string(CR) + ":Real Name must contain only printable chars!" + std::string(DEF) + "\r\n");
+		return (std::string(CR) + ":Real Name must contain only printable chars! (accents and umlauts not supported)" + std::string(DEF) + "\r\n");
 
 	_clients[client_fd]->setRealName(realName);
 	help += std::string(CG) + ":Real Name changed successfully to:" + realName + std::string(DEF) + "\r\n";
@@ -645,6 +687,123 @@ std::string	Server::user(int client_fd)
 
 	return (help);
 }
+
+std::string	Server::privmsg(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
+
+	if (args.size() < 2)
+		return (std::string(CR) + ":Need more args!" + std::string(DEF) + "\r\n");
+
+	if (args[0][0] != '#')
+	{
+		for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+		{
+			if (args[0] == it->second->getNick())
+			{
+				sendMessageTo(it->first, args[1]);
+				return ("");
+			}
+		}
+		return (std::string(CR) + ":Nickname not found!" + std::string(DEF) + "\r\n");
+	}
+	else if (args[0].find_first_of("*?") != std::string::npos)
+	{
+		// permitir que solo los operadores usen wilcards..
+		return (std::string(CP) + ":Feature not added yet!" + std::string(DEF) + "\r\n");
+	}
+	else
+	{
+		//seach if channel exist in server
+		//get the <vector> || <map> of clients connected in this channel if encountered.
+		//send the msg for this clients
+		return (std::string(CP) + ":The channel feature is not implemented yet.." + std::string(DEF) + "\r\n"); // This is temporal.
+	}
+	return (help);
+}
+
+#pragma region PING - PONG
+std::string	Server::ping(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
+
+	if (args.empty())
+		return (std::string(CR) + ":Args not given!" + std::string(DEF) + "\r\n");
+
+	help += std::string(CWR) + "9\\ * PING - \"" + args[0] + "\" - Recieved from: |" + itoa(client_fd) + "|";
+	help += ", alias \"" + _clients[client_fd]->getNick() + "\"\r\n" + std::string(DEF);
+
+	std::cout << help;
+	help = std::string(CWR) + "- \"" + args[0] + "\" - */P PONG!\r\n" + std::string(DEF);
+	return (help);
+}
+
+void	Server::pingClient(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	if (_clients[client_fd]->getIsPongWaiting())
+		return ;
+
+	_pong = itoa(rand());
+	std::string help = std::string(CWR) + "9\\ * PING - \"" + _pong + "\" -\r\n" + std::string(DEF);
+	std::cout << "Sended a PING to: " << client_fd << "with -" << _pong << std::endl;
+	_clients[client_fd]->setIsPongSent(false);
+	_clients[client_fd]->setIsPongWaiting(true);
+	_clients[client_fd]->setLastPingSent(time(NULL));
+	sendMessageTo(client_fd, help);
+}
+
+void	Server::ping_pong(int client_fd)
+{
+	time_t	now = time(NULL);
+
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	if (!_clients[client_fd]->getIsRegistered())
+		return ;
+	if (_clients[client_fd]->getIsPongWaiting())
+	{
+		time_t	last_ping = _clients[client_fd]->getLastPingSent();
+		if (now - last_ping > PING_TIMEOUT)
+		{
+			std::string	help = std::string(CYR) + itoa(client_fd) + " ** TIMEOUT!! - Desconecting..\r\n" + std::string(CYR);
+			handleClientExit(_clients[client_fd]->getPos(), client_fd);
+		}
+		return ;
+	}
+	time_t	last_activity = _clients[client_fd]->getLastActivity();
+	if (now - last_activity > PING_INTERV)
+		pingClient(client_fd);
+}
+
+std::string	Server::pong(int client_fd)
+{
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
+
+	if (args.empty())
+		return (std::string(CR) + ":Args not given!" + std::string(DEF) + "\r\n");
+	if (args[0] != _pong)
+		return (std::string(CR) + ":Invalid PONG token!" + std::string(DEF) + "\r\n");
+	if (_clients[client_fd]->getIsPongSent())
+		return (std::string(CY) + ":Alredy sent a PONG. Wait for next PING..." + std::string(DEF) + "\r\n");
+
+	_clients[client_fd]->setIsPongWaiting(false);
+	_clients[client_fd]->setIsPongSent(true);
+	_clients[client_fd]->setLastPongSent(time(NULL));
+
+	help += std::string(CWR) + "|" + itoa(client_fd) + "|";
+	help += ", alias \"" + _clients[client_fd]->getNick() + "\"";
+	help += "- \"" + args[0] + "\" - */P PONG!\r\n" + std::string(DEF);
+	std::cout << help;
+	help.clear();
+	return (help);
+}
+
+#pragma endregion PING - PONG
 
 std::string	Server::clear(void) {	return (std::string(CLEAN));	}
 std::string	Server::serverStatus(void)

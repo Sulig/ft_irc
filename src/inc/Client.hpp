@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/11 16:43:51 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/14 18:06:37 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,9 @@
 
 # include <string>
 # include <vector>
+# include <set>
+
+# include "utils.hpp"
 
 /*	NICK RULES	*/
 # define	NICK_MAX_CHARS			9
@@ -23,7 +26,6 @@
 
 /*	USER RULES	*/
 # define	USER_MUST_NOT_CONTAIN	" :"
-
 
 /*	CLIENT MODES	*/
 # define	MODE_DEF	0x00
@@ -39,15 +41,28 @@ class	Client
 		bool	_is_welcomeSend;
 		size_t	_pos;
 
-		size_t	_command;
-		std::vector<std::string>	_args;
+		/*	COMMAND	*/
+		t_command				_actualcmd;
 
+		/*	CLIENT REGISTER VARS	*/
 		std::string	_buffer;
 		std::string	_sendbuffer;
 		std::string	_nick;
 		std::string	_user;
 		std::string	_realname;
 		int			_userModes;
+
+		//*	CHANNEL	*/
+		std::set<std::string>	channel_name;
+
+		/*	PING - PONG	*/
+		time_t		_lastPingSent;
+		time_t		_lastPongSent;
+		time_t		_lastActivity;
+		bool		_isPongSent;
+		bool		_isPongWaiting;
+
+		void	clientStartVars(void);
 
 	public:
 		Client();
@@ -67,8 +82,14 @@ class	Client
 
 		int		getUserModes(void);
 
-		int		getCommand(void);
-		std::vector<std::string>	getAgrs(void);
+		bool	getIsPongSent(void);
+		bool	getIsPongWaiting(void);
+		time_t	getLastPingSent(void);
+		time_t	getLastPongSent(void);
+		time_t	getLastActivity(void);
+
+		std::vector<std::string>	getActualCmdArgs(void);
+		t_command					getActualCommand(void);
 
 		/*	SETTERS	*/
 		void	setPos(size_t pos);
@@ -83,13 +104,23 @@ class	Client
 
 		void	setUserModes(int modes);
 
-		void	setCommand(int command);
-		void	setAgrs(std::vector<std::string> args);
+		void	setIsPongSent(bool pong);
+		void	setIsPongWaiting(bool pong);
+		void	setLastPingSent(time_t time);
+		void	setLastPongSent(time_t time);
+		void	setLastActivity(time_t time);
 
-		/** */
+		void	setActualCommand(t_command cmd);
+
+		//** */
 		void	appendToSendBuffer(std::string _send);
-		void	clearArgs(void);
-		int	sendPendingData(void);
+		int		sendPendingData(void);
+
+		// para channel_name
+		void	addChannel(const std::string& name);
+		void	removeChannel(const std::string& name);
+		bool	inChannel(const std::string& name) const;
+		const	std::set<std::string>& channels() const;
 };
 
 #endif

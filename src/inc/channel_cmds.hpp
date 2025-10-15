@@ -14,6 +14,7 @@ void handleMODE (t_irc& irc, Channels& chans, int fd, const std::vector<std::str
 void handleINVITE(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
 void handleKICK (t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
 void handleQUIT (t_irc& irc, Channels& chans, int fd, const std::string& quitMsg);
+void handlePRIVMSG(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
 
 
 /*
