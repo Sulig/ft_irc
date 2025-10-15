@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/14 18:09:13 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/15 16:32:30 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ Client::~Client()	{}
 /* ----- */
 
 /*	GETTERS	*/
+size_t	Client::getFD(void)	{	return (this->_fd);	}
 size_t	Client::getPos(void)	{	return (this->_pos);	}
 bool	Client::getIsLogged(void)	{	return (this->_is_logged);	}
 bool	Client::getIsRegistered(void)	{	return (this->_is_registered);	}

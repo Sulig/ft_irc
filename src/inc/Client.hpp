@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/14 18:06:37 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/15 16:32:22 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,7 @@ class	Client
 
 		//*	CHANNEL	*/
 		std::set<std::string>	channel_name;
+		//std::map<std::string, Channel> ? no es mejor asi?
 
 		/*	PING - PONG	*/
 		time_t		_lastPingSent;
@@ -70,6 +71,7 @@ class	Client
 		~Client();
 
 		/*	GETTERS	*/
+		size_t	getFD(void);
 		size_t	getPos(void);
 		bool	getIsLogged(void);
 		bool	getIsRegistered(void);

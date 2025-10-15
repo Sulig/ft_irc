@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/14 17:46:53 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/15 16:39:20 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,18 @@ Server::~Server()
 		close(_server_fd);
 }
 /* ----- */
+
+/*	GETTERS	*/
+Client	*Server::getClient(int fd)
+{
+	if (_clients.find(fd) == _clients.end())
+		return (NULL);
+	else
+		return (_clients[fd]);
+}
+std::map<int, Client*>	Server::getClients(void)	{	return (_clients);	}
+/* ----- */
+
 
 /*	/=/	*/
 void	Server::startServer(int port, std::string pass)

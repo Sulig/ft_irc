@@ -3,18 +3,18 @@
 
 #include "channel.hpp"
 
-struct t_irc;
-class  Channels;
+class	Server;
+class	Channels;
 
 // Cada handler recibe el irc global, el fd del cliente y params (ya parseados)
-void handleJOIN (t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
-void handlePART (t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
-void handleTOPIC(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
-void handleMODE (t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
-void handleINVITE(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
-void handleKICK (t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
-void handleQUIT (t_irc& irc, Channels& chans, int fd, const std::string& quitMsg);
-void handlePRIVMSG(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params);
+void handleJOIN (Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
+void handlePART (Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
+void handleTOPIC(Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
+void handleMODE (Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
+void handleINVITE(Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
+void handleKICK (Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
+void handleQUIT (Server& irc, Channels& chans, int fd, const std::string& quitMsg);
+void handlePRIVMSG(Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
 
 
 /*
