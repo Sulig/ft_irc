@@ -13,10 +13,10 @@ class Channels
         Channels();
         ~Channels();
 
-        Channel* getOrCreate(const std::string& name); // crea si no existe
-        Channel* find(const std::string& name) const;  // nullptr si no existe
-        void     eraseIfEmpty(const std::string& name);
-        void     removeClientEverywhere(const t_irc& irc, int fd); // para QUIT
+        Channel*    getOrCreate(const std::string& name); // crea si no existe
+        Channel*    find(const std::string& name) const;  // nullptr si no existe
+        void        eraseIfEmpty(const std::string& name);
+        void        Channels::removeClientEverywhere(Server serv, int fd); // para QUIT
 };
 
 #endif

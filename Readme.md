@@ -1,10 +1,13 @@
 Para hacer funcionar:
 
-./ircserv 6667 secreto // por ejemplo, en T1 (terminal 1)
+./ircserv 6667 secreto                              // por ejemplo, en T1 (terminal 1)
 
-nc 127.0.0.1 6667 // en T2
-PASS secreto      // en T2
-HELP              // te ensena la lista de cmds
+nc 127.0.0.1 6667                                   // en T2
+PASS + <secreto>                                    // en T2
+HELP                                                // te ensena la lista de cmds, puede pedir uno especifico
+NICK + <nick>                                       // pones tu nickname
+USER + <username> + <mode> + <unused> :<realname>   // USER samanta 0 (mode puede ser * tmb) * :Samanta Pascual
+
 
 ## Connectar con Irssi:
 /connect localhost 6667 word

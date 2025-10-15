@@ -10,6 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
+
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
@@ -92,6 +93,11 @@ class	Server
 		~Server();
 		//** */
 
+		/*	GETTERS	*/
+		Client	*getClient(int fd);
+		std::map<int, Client*>	getClients(void);
+
+		//** */
 		void	startServer(int port, std::string pass);
 };
 

@@ -1,109 +1,88 @@
 #include "inc/channel_plural.hpp"
 #include "inc/helpers.hpp"
 #include "inc/Client.hpp"
+#include "inc/Server.hpp"
 
 // Small helpers
 static std::string nickOrStar(Client* c) { return c ? c->getNick() : "*"; } // devuelve Nick del cliente si c != NULL
 static std::string prefixOf(Client* c) { return ":" + nickOrStar(c) + "!" + nickOrStar(c) + "@localhost"; } // Crea la “cabecera” (prefijo) de un mensaje IRC, con el formato estándar ":nick!nick@localhost"
 
-void handlePRIVMSG(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
+void handlePRIVMSG(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
-    Client* me = getClientFd(irc, fd);
+    Client* me = getClientFd(serv, fd);
     if (!me)
         return;
 
     if (params.size() < 2)
     {
-        // ERR_NEEDMOREPARAMS (461)
-        sendRawFd(fd, ":server 461 " + (me->getNick().empty() ? "*" : me->getNick())
-                       + " PRIVMSG :Not enough parameters\r\n");
+        sendRawFd(fd, ":server 461 " + (me->getNick().empty() ? "*" : me->getNick()) + " PRIVMSG :Not enough parameters\r\n");
         return;
     }
 
     std::string target = params[0];
-    std::string msg    = params[1];
+    std::string msg    = params[1]; // parser trae sin ':'
 
-    // PRIVMSG a canal
+    // A canal
     if (isChannelName(target))
     {
-        Channel* ch = chans.find(target[0] == '#' ? target : "#" + target);
+        std::string chName = target[0] == '#' ? target : ("#" + target);
+        Channel* ch = chans.find(chName);
         if (!ch)
         {
-            // ERR_NOSUCHCHANNEL (403)
-            sendRawFd(fd, ":server 403 " + me->getNick() + " " + target + " :No such channel\r\n");
+            sendRawFd(fd, ":server 403 " + me->getNick() + " " + chName + " :No such channel\r\n");
             return;
         }
         if (!ch->has(fd))
         {
-            // ERR_NOTONCHANNEL (442)
-            sendRawFd(fd, ":server 442 " + me->getNick() + " " + ch->name() + " :You're not on that channel\r\n");
+            sendRawFd(fd, ":server 442 " + me->getNick() + " " + chName + " :You're not on that channel\r\n");
             return;
         }
-
-        // :nick!nick@localhost PRIVMSG #canal :mensaje
-        std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost"
-                        + " PRIVMSG " + ch->name() + " :" + msg + "\r\n";
-        ch->broadcastExcept(*irc.clients, me, raw);
+        std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost PRIVMSG "
+                        + chName + " :" + msg + "\r\n";
+        ch->broadcastExcept(serv.getClients(), me, raw);
         return;
     }
 
-    // PRIVMSG a nick: buscar en irc.clients sin helpers extra
-    int dstFd = -1;
-    for (std::map<int, Client*>::iterator it = irc.clients->begin(); it != irc.clients->end(); ++it)
-    {
-        Client* c = it->second;
-        if (c && c->getNick() == target)
-        {
-            dstFd = it->first;
-            break;
-        }
-    }
+    // A nick
+    int dstFd = getFdByNick(serv, target);
     if (dstFd == -1)
     {
-        // ERR_NOSUCHNICK (401)
         sendRawFd(fd, ":server 401 " + me->getNick() + " " + target + " :No such nick/channel\r\n");
         return;
     }
-
-    // :nick!nick@localhost PRIVMSG nick :mensaje
-    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost"
-                    + " PRIVMSG " + target + " :" + msg + "\r\n";
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost PRIVMSG "
+                    + target + " :" + msg + "\r\n";
     sendRawFd(dstFd, raw);
 }
 
 
 
-/* PART: PART <#chan> [<message>] */
-void handlePART(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
-{
-    Client*     me = getClientFd(irc, fd);
-    std::string chName;
-    Channel*    ch;
-    std::string partMsg;
-    std::string raw;
 
-    if (!me)
-        return;
-    if (params.empty())
-    {
-        sendRawFd(fd, ":server 461 " + nickOrStar(me) + " PART :Not enough parameters\r\n");
+/* PART: PART <#chan> [<message>] */
+void handlePART(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client* me = getClientFd(serv, fd);
+    if (!me) return;
+
+    if (params.empty()) {
+        sendRawFd(fd, ":server 461 " + me->getNick() + " PART :Not enough parameters\r\n");
         return;
     }
 
-    chName = params[0];
-    if (!isChannelName(chName))
-        chName = "#" + chName;
+    std::string chName = params[0];
+    if (!isChannelName(chName)) chName = "#" + chName;
 
-    ch = chans.find(chName);
-    if (!ch || !ch->has(fd))
-    {
+    Channel* ch = chans.find(chName);
+    if (!ch || !ch->has(fd)) {
         sendRawFd(fd, ":server 442 " + me->getNick() + " " + chName + " :You're not on that channel\r\n");
         return;
     }
 
-    partMsg = (params.size() >= 2 ? params[1] : std::string());
-    raw = prefixOf(me) + " PART " + chName + (partMsg.empty()?"":" :"+partMsg) + "\r\n";
-    ch->broadcast(*irc.clients, raw);
+    std::string partMsg = (params.size() >= 2 ? params[1] : std::string());
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost PART "
+                    + chName + (partMsg.empty() ? "" : " :" + partMsg) + "\r\n";
+
+    ch->broadcast(serv.getClients(), raw);
     ch->remove(fd);
     chans.eraseIfEmpty(chName);
 }
@@ -112,18 +91,14 @@ void handlePART(t_irc& irc, Channels& chans, int fd, const std::vector<std::stri
 
 
 
-/* INVITE: INVITE <nick> <#chan> */
-void handleINVITE(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
-{
-    Client*             me = getClientFd(irc, fd);
-    std::string         chName;
-    Channel*            ch;
-    Client*             target;
-    int                 targetFd;
-    // var const llamada nick
 
+/* INVITE: INVITE <nick> <#chan> */
+void handleINVITE(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client* me = getClientFd(serv, fd);
     if (!me)
         return;
+
     if (params.size() < 2)
     {
         sendRawFd(fd, ":server 461 " + me->getNick() + " INVITE :Not enough parameters\r\n");
@@ -131,11 +106,12 @@ void handleINVITE(t_irc& irc, Channels& chans, int fd, const std::vector<std::st
     }
 
     const std::string nick = params[0];
-    chName = params[1];
+    std::string chName     = params[1];
+
     if (!isChannelName(chName))
         chName = "#" + chName;
 
-    ch = chans.find(chName);
+    Channel* ch = chans.find(chName);
     if (!ch)
     {
         sendRawFd(fd, ":server 403 " + me->getNick() + " " + chName + " :No such channel\r\n");
@@ -152,22 +128,9 @@ void handleINVITE(t_irc& irc, Channels& chans, int fd, const std::vector<std::st
         return;
     }
 
-    // Find target client by nick
-    target = 0;
-    targetFd = -1;
-    if (irc.clients)
-    {
-        for (std::map<int, Client*>::const_iterator it=irc.clients->begin(); it!=irc.clients->end(); ++it)
-        {
-            if (it->second && it->second->getNick() == nick)
-            {
-                target = it->second;
-                targetFd = it->first;
-                break;
-            }
-        }
-    }
-    if (!target)
+    // localizar target
+    int targetFd = getFdByNick(serv, nick);
+    if (targetFd == -1)
     {
         sendRawFd(fd, ":server 401 " + me->getNick() + " " + nick + " :No such nick/channel\r\n");
         return;
@@ -180,63 +143,60 @@ void handleINVITE(t_irc& irc, Channels& chans, int fd, const std::vector<std::st
 
     ch->inviteNick(nick);
 
-    // Notify inviter (341) & send INVITE to target
+    // 341 al que invita
     sendRawFd(fd, ":server 341 " + me->getNick() + " " + nick + " " + chName + "\r\n");
-    std::string raw = prefixOf(me) + " INVITE " + nick + " :" + chName + "\r\n";
+
+    // INVITE al objetivo
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost INVITE " + nick + " :" + chName + "\r\n";
     sendRawFd(targetFd, raw);
 }
 
 
 
 
+
 /* QUIT: QUIT [:message]  (we receive already-parsed quitMsg) */
-void handleQUIT(t_irc& irc, Channels& chans, int fd, const std::string& quitMsg)
+void handleQUIT(Server& serv, Channels& chans, int fd, const std::string& quitMsg)
 {
-    Client*     me = getClientFd(irc, fd);
-    std::string raw;
-    if (!me)
-        return;
+    Client* me = getClientFd(serv, fd);
+    if (!me) return;
 
-    // Broadcast to every channel where this fd is present.
-    // Channels to do, sweep (removeClientEverywhere)
-    raw = prefixOf(me) + " QUIT" + (quitMsg.empty()?"":" :"+quitMsg) + "\r\n";
+    // Si quieres hacer broadcast explícito del QUIT:
+    // std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost QUIT"
+    //                 + (quitMsg.empty() ? "" : " :" + quitMsg) + "\r\n";
+    // (emitirlo en cada canal antes de remover)
 
-    // we ask Channels to remove everywhere; inside, after each removal, you can
-    // call Channel::broadcastExcept(...), if keep Channel pointer before removing.
-    (void)raw; // to broadcast here, use `raw`.
-
-    chans.removeClientEverywhere(irc, fd);
+    // Utilidad del gestor de canales que quite al user de todos los channels.
+    // (Implementadla si no existe)
+    chans.removeClientEverywhere(serv, fd);
 }
 
 
 
 
 
-/* KICK: KICK <#chan> <nick> [<comment>] */
-void handleKICK(t_irc& irc, Channels& chans, int fd, const std::vector<std::string>& params)
-{
-    Client*         me = getClientFd(irc, fd);
-    std::string     chName;
-    std::string     reason;
-    Channel*        ch;
-    Client*         target;
-    int             targetFd;
 
+/* KICK: KICK <#chan> <nick> [<comment>] */
+void handleKICK(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client* me = getClientFd(serv, fd);
     if (!me)
         return;
+
     if (params.size() < 2)
     {
         sendRawFd(fd, ":server 461 " + me->getNick() + " KICK :Not enough parameters\r\n");
         return;
     }
 
-    chName = params[0];
+    std::string chName = params[0];
     const std::string nick = params[1];
-    reason = (params.size() >= 3 ? params[2] : std::string());
+    std::string reason = (params.size() >= 3 ? params[2] : std::string());
+    
     if (!isChannelName(chName))
         chName = "#" + chName;
 
-    ch = chans.find(chName);
+    Channel* ch = chans.find(chName);
     if (!ch)
     {
         sendRawFd(fd, ":server 403 " + me->getNick() + " " + chName + " :No such channel\r\n");
@@ -253,29 +213,15 @@ void handleKICK(t_irc& irc, Channels& chans, int fd, const std::vector<std::stri
         return;
     }
 
-    // Find target
-    target = 0;
-    targetFd = -1;
-    if (irc.clients)
-    {
-        for (std::map<int, Client*>::const_iterator it=irc.clients->begin(); it!=irc.clients->end(); ++it)
-        {
-            if (it->second && it->second->getNick() == nick)
-            {
-                target = it->second;
-                targetFd = it->first;
-                break;
-            }
-        }
-    }
-    if (!target || !ch->has(targetFd))
+    int targetFd = getFdByNick(serv, nick);
+    if (targetFd == -1 || !ch->has(targetFd))
     {
         sendRawFd(fd, ":server 441 " + me->getNick() + " " + nick + " " + chName + " :They aren't on that channel\r\n");
         return;
     }
 
-    std::string raw = prefixOf(me) + " KICK " + chName + " " + nick + (reason.empty()?"":" :"+reason) + "\r\n";
-    ch->broadcast(*irc.clients, raw);
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost KICK " + chName + " " + nick + (reason.empty()? "" : " :" + reason) + "\r\n";
+    ch->broadcast(serv.getClients(), raw);
     ch->remove(targetFd);
     chans.eraseIfEmpty(chName);
 }
@@ -292,7 +238,7 @@ Handlers que implementan el comportamiento de cada comando ya parseado:
 handleJOIN, handlePART, handleTOPIC, handleMODE, handleINVITE, handleKICK, handleQUIT.
 
 Reciben:
-t_irc& irc (estado global: mapa de clientes, sus nicks, etc.)
+Server *serv (estado global: mapa de clientes, sus nicks, etc.)
 Channels& chans (registro central de canales)
 fd (socket del cliente que ejecuta el comando)
 params (vector de strings ya tokenizados; JOIN puede traer listas separadas por comas)

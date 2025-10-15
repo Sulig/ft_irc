@@ -53,6 +53,18 @@ Server::~Server()
 }
 /* ----- */
 
+/*	GETTERS	*/
+Client	*Server::getClient(int fd)
+{
+	if (_clients.find(fd) == _clients.end())
+		return (NULL);
+	else
+		return (_clients[fd]);
+}
+std::map<int, Client*>	Server::getClients(void)	{	return (_clients);	}
+/* ----- */
+
+
 /*	/=/	*/
 void	Server::startServer(int port, std::string pass)
 {
