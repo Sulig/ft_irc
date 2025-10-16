@@ -1,5 +1,8 @@
-#include "inc/channel_plural.hpp"
-#include "inc/Server.hpp"
+# include "inc/Server.hpp"
+# include "inc/Client.hpp"
+# include "inc/channel.hpp"
+# include "inc/channel_plural.hpp"
+# include "inc/channel_cmds.hpp"
 
 static std::string normName(const std::string& s)
 {
@@ -13,8 +16,9 @@ Channels::Channels() {}
 
 Channels::~Channels()
 {
-    for (std::map<std::string, Channel*>::iterator it=_byName.begin(); it!=_byName.end(); ++it)
+    for (std::map<std::string, Channel*>::iterator it = _byName.begin(); it != _byName.end(); ++it)
         delete it->second;
+    _byName.clear();
 }
 
 Channel* Channels::getOrCreate(const std::string& name)

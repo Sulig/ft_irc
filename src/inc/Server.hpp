@@ -44,6 +44,9 @@
 # define PING_TIMEOUT	60			// x sec. Timeout if client don't respond to PING
 
 class Client;
+//class Channels; // para cmds
+#include "channel_plural.hpp"
+
 class	Server
 {
 	private:
@@ -54,6 +57,7 @@ class	Server
 		std::vector<pollfd>			_fds;
 		std::map<int, Client*>		_clients;
 		std::vector<std::string>	_commands;
+		Channels					_channels; // anadido para acceder a los cmds desde executeCMD
 
 		void	startServerVars(void);
 		void	serverLoop(void);

@@ -3,7 +3,7 @@
 
 #include "channel.hpp"
 
-struct t_irc;
+class Server;
 
 class Channels
 {
@@ -15,8 +15,8 @@ class Channels
 
         Channel*    getOrCreate(const std::string& name); // crea si no existe
         Channel*    find(const std::string& name) const;  // nullptr si no existe
-        void        eraseIfEmpty(const std::string& name);
-        void        Channels::removeClientEverywhere(Server serv, int fd); // para QUIT
+        void        eraseIfEmpty(const std::string& name); // si no hay nadie en el canal...
+        void        removeClientEverywhere(Server serv, int fd); // para QUIT
 };
 
 #endif

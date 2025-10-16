@@ -12,6 +12,9 @@
 
 # include "inc/Server.hpp"
 # include "inc/Client.hpp"
+# include "inc/channel.hpp"
+# include "inc/channel_plural.hpp"
+# include "inc/channel_cmds.hpp"
 
 /* Constructor & destructor */
 void	Server::startServerVars(void)
@@ -423,6 +426,8 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 		_clients[client_fd]->setLastActivity(time(NULL));
 		return ;
 	}
+
+	// he tocado el switch
 	switch (cmd.cmd_num)
 	{
 		case 0:
@@ -437,18 +442,31 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 		case 1: sendMessageTo(client_fd, pass(client_fd)); break;
 		case 2: sendMessageTo(client_fd, nick(client_fd)); break;
 		case 3: sendMessageTo(client_fd, user(client_fd)); break;
-		case 4: sendMessageTo(client_fd, privmsg(client_fd)); break;
+		case 4: handlePRIVMSG(*this, _channels, client_fd, cmd.args); break;
+
+		// Nuevos handlers de canales
+		case 5: handleQUIT(*this, _channels, client_fd, ""); break;
+		case 6: handleJOIN(*this, _channels, client_fd, cmd.args); break;
+		case 7: handlePART(*this, _channels, client_fd, cmd.args); break;
+		case 8: handleKICK(*this, _channels, client_fd, cmd.args); break;
+		case 9: handleINVITE(*this, _channels, client_fd, cmd.args); break;
+		case 10: handleTOPIC(*this, _channels, client_fd, cmd.args); break;
+		case 11: handleMODE(*this, _channels, client_fd, cmd.args); break;
 
 		case 12: sendMessageTo(client_fd, ping(client_fd)); break;
 		case 13: sendMessageTo(client_fd, pong(client_fd)); break;
 		case 14: sendMessageTo(client_fd, clear()); break;
 		case 15: sendMessageTo(client_fd, serverStatus()); break;
 		case 16: sendMessageTo(client_fd, cap(client_fd)); break;
+
 		default:
+		{
 			std::string help = std::string(CR) + ":This command don't exist or is not implemented yet." + std::string(DEF) + "\r\n";
 			sendMessageTo(client_fd, help);
 			break ;
+		}
 	}
+
 	_clients[client_fd]->setLastActivity(time(NULL));
 }
 

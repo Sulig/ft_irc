@@ -2,11 +2,14 @@
 #define COMMANDS_CHANNEL_HPP
 
 #include "channel.hpp"
+#include "Server.hpp"
+#include "channel_plural.hpp"
 
 class	Server;
 class	Channels;
 
 // Cada handler recibe el irc global, el fd del cliente y params (ya parseados)
+
 void handleJOIN (Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
 void handlePART (Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);
 void handleTOPIC(Server& irc, Channels& chans, int fd, const std::vector<std::string>& params);

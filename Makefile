@@ -43,7 +43,9 @@ OBJ_DIR		:=	./obj
 MAK	:= Makefile
 HDR	:= $(INC_DIR)/ # Headers
 
-SRC_SRC := irc_main.cpp Client.cpp Server.cpp utils.cpp
+SRC_SRC := irc_main.cpp Client.cpp Server.cpp utils.cpp \
+            channel.cpp channel_cmds.cpp channel_plural.cpp helpers.cpp
+
 
 SRC := $(addprefix $(SRC_DIR), $(SRC_SRC))
 

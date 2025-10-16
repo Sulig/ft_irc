@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sstream>
 
 class Client;
 
@@ -81,7 +82,8 @@ class Channel
         // Serialización de modos (para RPL_CHANNELMODEIS)
         std::string modeString() const;     // p.ej. "+itkl 10 clave"
 
-        
+        // Devolver una lista de nicks en el canal con @ delante si son operadores
+        std::string namesList(const std::map<int, Client*>& clients) const;
 };
 
 

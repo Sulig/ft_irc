@@ -3,10 +3,6 @@
 #include "inc/Client.hpp"
 #include "inc/Server.hpp"
 
-// Small helpers
-static std::string nickOrStar(Client* c) { return c ? c->getNick() : "*"; } // devuelve Nick del cliente si c != NULL
-static std::string prefixOf(Client* c) { return ":" + nickOrStar(c) + "!" + nickOrStar(c) + "@localhost"; } // Crea la “cabecera” (prefijo) de un mensaje IRC, con el formato estándar ":nick!nick@localhost"
-
 void handlePRIVMSG(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
     Client* me = getClientFd(serv, fd);
@@ -154,22 +150,40 @@ void handleINVITE(Server& serv, Channels& chans, int fd, const std::vector<std::
 
 
 
-
-/* QUIT: QUIT [:message]  (we receive already-parsed quitMsg) */
+/* QUIT: QUIT [:message] */
 void handleQUIT(Server& serv, Channels& chans, int fd, const std::string& quitMsg)
 {
     Client* me = getClientFd(serv, fd);
-    if (!me) return;
+    if (!me)
+        return;
 
-    // Si quieres hacer broadcast explícito del QUIT:
-    // std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost QUIT"
-    //                 + (quitMsg.empty() ? "" : " :" + quitMsg) + "\r\n";
-    // (emitirlo en cada canal antes de remover)
+    // Mensaje que se enviará a todos los canales donde estaba el usuario
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost QUIT"
+                    + (quitMsg.empty() ? " :Client Quit" : " :" + quitMsg) + "\r\n";
 
-    // Utilidad del gestor de canales que quite al user de todos los channels.
-    // (Implementadla si no existe)
+    // Notifica a todos los canales que el usuario ha salido
     chans.removeClientEverywhere(serv, fd);
+
+    // Envía el mensaje de QUIT al propio usuario (opcional)
+    sendRawFd(fd, raw);
+
+    // Cierra el socket del cliente, pero NO el servidor
+    close(fd);
+
+    // Elimina el cliente del mapa de clientes y del vector de poll
+    std::map<int, Client*> clients = serv.getClients();
+    std::map<int, Client*>::iterator it = clients.find(fd);
+    if (it != clients.end())
+    {
+        delete it->second;
+        clients.erase(it);
+    }
+
+    // En clase Server un método tipo removeClient(fd) ?
+    // directamente:
+    // serv.removeClient(fd);
 }
+
 
 
 
@@ -228,6 +242,198 @@ void handleKICK(Server& serv, Channels& chans, int fd, const std::vector<std::st
 
 
 
+
+/* JOIN: JOIN <#chan> [<key>] */
+void handleJOIN(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client* me = getClientFd(serv, fd);
+    if (!me)
+        return;
+
+    if (params.empty())
+    {
+        sendRawFd(fd, ":server 461 " + me->getNick() + " JOIN :Not enough parameters\r\n");
+        return;
+    }
+
+    std::string chName = params[0];
+    if (!isChannelName(chName))
+        chName = "#" + chName;
+
+    std::string key = (params.size() >= 2 ? params[1] : "");
+
+    Channel* ch = chans.find(chName);
+    if (!ch)
+    {
+        // canal no existe → lo creamos y añadimos al cliente
+        ch = chans.getOrCreate(chName);
+        ch->giveOp(fd);
+        ch->setModeK(true, key);
+    }
+    else
+    {
+        // canal existe → validamos si puede entrar
+        if (ch->modeI() && !ch->isInvited(me->getNick()))
+        {
+            sendRawFd(fd, ":server 473 " + me->getNick() + " " + chName + " :Cannot join channel (+i)\r\n");
+            return;
+        }
+        if (ch->modeK() && ch->key() != key)
+        {
+            sendRawFd(fd, ":server 475 " + me->getNick() + " " + chName + " :Cannot join channel (+k)\r\n");
+            return;
+        }
+        if (ch->modeL() && ch->size() >= ch->limit())
+        {
+            sendRawFd(fd, ":server 471 " + me->getNick() + " " + chName + " :Cannot join channel (+l)\r\n");
+            return;
+        }
+    }
+
+    // Añadir usuario al canal
+    ch->add(fd);
+
+    // Mensaje JOIN a todos los miembros
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost JOIN :" + chName + "\r\n";
+    ch->broadcast(serv.getClients(), raw);
+
+    // Enviar topic si existe
+    if (!ch->topic().empty())
+        sendRawFd(fd, ":server 332 " + me->getNick() + " " + chName + " :" + ch->topic() + "\r\n");
+    else
+        sendRawFd(fd, ":server 331 " + me->getNick() + " " + chName + " :No topic is set\r\n");
+
+    // Enviar lista de nicks
+    std::string names = ch->namesList(serv.getClients());
+    sendRawFd(fd, ":server 353 " + me->getNick() + " = " + chName + " :" + names + "\r\n");
+    sendRawFd(fd, ":server 366 " + me->getNick() + " " + chName + " :End of /NAMES list\r\n");
+}
+
+
+
+
+/* TOPIC: TOPIC <#chan> [<topic>] */
+void handleTOPIC(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client* me = getClientFd(serv, fd);
+    if (!me)
+        return;
+
+    if (params.empty())
+    {
+        sendRawFd(fd, ":server 461 " + me->getNick() + " TOPIC :Not enough parameters\r\n");
+        return;
+    }
+
+    std::string chName = params[0];
+    if (!isChannelName(chName))
+        chName = "#" + chName;
+
+    Channel* ch = chans.find(chName);
+    if (!ch)
+    {
+        sendRawFd(fd, ":server 403 " + me->getNick() + " " + chName + " :No such channel\r\n");
+        return;
+    }
+    if (!ch->has(fd))
+    {
+        sendRawFd(fd, ":server 442 " + me->getNick() + " " + chName + " :You're not on that channel\r\n");
+        return;
+    }
+
+    // Ver topic
+    if (params.size() == 1)
+    {
+        if (ch->topic().empty())
+            sendRawFd(fd, ":server 331 " + me->getNick() + " " + chName + " :No topic is set\r\n");
+        else
+            sendRawFd(fd, ":server 332 " + me->getNick() + " " + chName + " :" + ch->topic() + "\r\n");
+        return;
+    }
+
+    // Cambiar topic
+    if (ch->modeT() && !ch->isOp(fd))
+    {
+        sendRawFd(fd, ":server 482 " + me->getNick() + " " + chName + " :You're not channel operator\r\n");
+        return;
+    }
+
+    std::string newTopic = params[1];
+    ch->setTopic(newTopic);
+
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost TOPIC " + chName + " :" + newTopic + "\r\n";
+    ch->broadcast(serv.getClients(), raw);
+}
+
+
+
+
+
+/* MODE: MODE <#chan> [<modes> [params...]] */
+void handleMODE(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    Client* me = getClientFd(serv, fd);
+    if (!me) return;
+
+    if (params.empty())
+    {
+        sendRawFd(fd, ":server 461 " + me->getNick() + " MODE :Not enough parameters\r\n");
+        return;
+    }
+
+    std::string chName = params[0];
+    if (!isChannelName(chName))
+        chName = "#" + chName;
+
+    Channel* ch = chans.find(chName);
+    if (!ch)
+    {
+        sendRawFd(fd, ":server 403 " + me->getNick() + " " + chName + " :No such channel\r\n");
+        return;
+    }
+
+    if (params.size() == 1)
+    {
+        sendRawFd(fd, ":server 324 " + me->getNick() + " " + chName + " " + ch->modeString() + "\r\n");
+        return;
+    }
+
+    if (!ch->isOp(fd))
+    {
+        sendRawFd(fd, ":server 482 " + me->getNick() + " " + chName + " :You're not channel operator\r\n");
+        return;
+    }
+
+    std::string modes = params[1];
+    bool adding = true;
+    size_t paramIndex = 2;
+
+    for (size_t i = 0; i < modes.size(); ++i)
+    {
+        char c = modes[i];
+        if (c == '+') adding = true;
+        else if (c == '-') adding = false;
+        else if (c == 'i') ch->setModeI(adding);
+        else if (c == 't') ch->setModeT(adding);
+        else if (c == 'k')
+        {
+            if (adding && paramIndex < params.size())
+                ch->setModeK(true, params[paramIndex++]);
+            else
+                ch->unsetModeK();
+        }
+        else if (c == 'l')
+        {
+            if (adding && paramIndex < params.size())
+                ch->setModeL(true, atoi(params[paramIndex++].c_str()));
+            else
+                ch->unsetModeL();
+        }
+    }
+
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost MODE " + chName + " " + modes + "\r\n";
+    ch->broadcast(serv.getClients(), raw);
+}
 
 
 

@@ -210,9 +210,33 @@ std::string Channel::modeString() const
     if (_mode_l) s += "l";
     // argumentos en orden k l
     if (_mode_k && !_key.empty()) args += " " + _key;
-    if (_mode_l && _limit)         args += " " + std::to_string(_limit);
+    if (_mode_l && _limit)
+    {
+        std::ostringstream ss;
+        ss << _limit;
+        args += " " + ss.str();
+    }
     if (s == "+") s.clear(); // sin modos activos
     return s + args;
+}
+
+std::string Channel::namesList(const std::map<int, Client*>& clients) const
+{
+    std::string result;
+    for (std::vector<int>::const_iterator i = _members.begin(); i != _members.end(); ++i)
+    {
+        std::map<int, Client*>::const_iterator c = clients.find(*i);
+        if (c != clients.end())
+        {
+            if (!_operators.empty() && _operators.count(*i))
+                result += "@" + c->second->getNick();
+            else
+                result += c->second->getNick();
+            if (i + 1 != _members.end())
+                result += " ";
+        }
+    }
+    return result;
 }
 
 

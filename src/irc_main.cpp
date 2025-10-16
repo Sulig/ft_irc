@@ -10,7 +10,11 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "inc/Server.hpp"
+# include "inc/Server.hpp"
+# include "inc/Client.hpp"
+# include "inc/channel.hpp"
+# include "inc/channel_plural.hpp"
+# include "inc/channel_cmds.hpp"
 
 int	main(int argc, const char **args)
 {
