@@ -1,4 +1,5 @@
 #include "inc/channel.hpp"
+#include "inc/Client.hpp"
 
 // constructor
 Channel::Channel(const std::string& name) : _name(name), _topic(""),
@@ -178,7 +179,7 @@ void Channel::broadcast(const std::map<int, Client*>& clients, const std::string
             continue;
 
         Client* c = iter->second;
-        c->appendToSendBuffer(raw); // mirar problema ?
+        c->appendToSendBuffer(raw); // mirar problema ?, anadir include Client era
     }
 }
 
@@ -195,7 +196,7 @@ void Channel::broadcastExcept(const std::map<int, Client*>& clients, Client* exc
         if (c == except) // saltar al emisor
             continue;
 
-        c->appendToSendBuffer(raw); // mirar problema ?
+        c->appendToSendBuffer(raw);
     }
 }
 

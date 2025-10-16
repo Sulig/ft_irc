@@ -6,22 +6,28 @@
 
 class Client;
 class Channel;
+class Server;
 
-struct t_irc
-{
-    std::map<int, Client*>* clients;          // fd -> Client*
-    std::map<std::string,int>* nickToFd;      // nick -> fd  (mantener esto al cambiar NICK)
-    std::string serverName;                   // "IRCSERV"
-};
-
+// quitado struct, usamos server por referencia para evitar copias innecesarias
 
 void        sendRawFd(int fd, const std::string& raw);
-Client*     getClientFd(const t_irc& irc, int fd);
-int         getFdByNick(const t_irc& irc, const std::string& nick);
-// std::string nickOf(const t_irc& irc, int fd); // cambiado a static y las 2 que usaban esta
-std::string userOf(const t_irc& irc, int fd);
-void        sendNumeric(const t_irc& irc, int fd, const std::string& code, const std::string& targetNick, const std::string& middle, const std::string& text);
-void        chanBroadcast(const t_irc& irc, const Channel* ch, const std::string& cmdLineNoCRLF);
+
+// Acceso a clientes a través del Server
+Client*     getClientFd(Server& serv, int fd);
+int         getFdByNick(Server& serv, const std::string& nick);
+std::string userOf(Server& serv, int fd);
+
+// Numerics y broadcast
+void        sendNumeric(Server& serv, int fd,
+                        const std::string& code,
+                        const std::string& targetNick,
+                        const std::string& middle,
+                        const std::string& text);
+
+void        chanBroadcast(Server& serv, const Channel* ch,
+                          const std::string& cmdLineNoCRLF);
+
+// Util
 bool        isChannelName(const std::string& s);
 
 #endif

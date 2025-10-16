@@ -1,5 +1,7 @@
-#include "inc/channel.hpp"
-#include "inc/helpers.hpp"
+# include "inc/channel.hpp"
+# include "inc/helpers.hpp"
+# include "inc/Server.hpp"
+# include "inc/Client.hpp"
 
 // :: antes indica: “usa la función global send del sistema”, send devuelve ssize_t bytes enviados
 void sendRawFd(int fd, const std::string& raw)
@@ -7,53 +9,58 @@ void sendRawFd(int fd, const std::string& raw)
     ::send(fd, raw.c_str(), raw.size(), 0);
 }
 
-Client* getClientFd(const t_irc& irc, int fd)
+Client* getClientFd(Server& serv, int fd) // existe en server, pero ya lo tengo
 {
-    if (!irc.clients)
-        return 0;
-    std::map<int, Client*>::iterator iter = irc.clients->find(fd);
-    return ((iter == irc.clients->end()) ? 0 : iter->second);
+    return serv.getClient(fd); // NULL si no existe
 }
 
-int getFdByNick(const t_irc& irc, const std::string& nick)
+int getFdByNick(Server& serv, const std::string& nick)
 {
-    if (!irc.nickToFd)
-        return -1;
-    std::map<std::string,int>::iterator iter = irc.nickToFd->find(nick);
-    return ((iter == irc.nickToFd->end()) ? -1 : iter->second);
+    std::map<int, Client*> clients = serv.getClients(); // copia (no podemos tomar referencia)
+    for (std::map<int, Client*>::const_iterator it = clients.begin(); it != clients.end(); ++it)
+    {
+        if (it->second && it->second->getNick() == nick)
+            return it->first;
+    }
+    return -1;
 }
 
-std::string userOf(const t_irc& irc, int fd)
+std::string userOf(Server& serv, int fd)
 {
-    Client* c = getClientFd(irc, fd);
-    // Si no tienes getter de user aún, devuelve "-"
-    return (c ? "-" : "-");
+    Client* c = serv.getClient(fd);
+    // Si todavía no tenéis “username/realname” en Client, devolvemos "-".
+    (void)c;
+    return "-";
 }
 
-void sendNumeric(const t_irc& irc, int fd, const std::string& code,
-                        const std::string& targetNick,
-                        const std::string& middle,
-                        const std::string& text)
+void sendNumeric(Server& serv, int fd,
+                 const std::string& code,
+                 const std::string& targetNick,
+                 const std::string& middle,
+                 const std::string& text)
 {
-    std::string raw = ":" + irc.serverName + " " + code + " " + targetNick;
+    (void)serv; // no hace falta
+    std::string raw = ":" + std::string(SERVER_NAME) + " " + code + " " + (targetNick.empty() ? "*" : targetNick);
     if (!middle.empty())
         raw += " " + middle;
     raw += " :" + text + "\r\n";
     sendRawFd(fd, raw);
 }
 
-// Broadcast dentro de un canal
-void chanBroadcast(const t_irc& irc, const Channel* ch, const std::string& cmdLineNoCRLF)
+void chanBroadcast(Server& serv, const Channel* ch, const std::string& cmdLineNoCRLF)
 {
-    // Necesitas acceso a los miembros: expón una forma si no la tienes.
-    // Como no hay getter directo, usa Channel::broadcast([...]) que ya tienes:
-    // construye un raw ya con prefijo fuera (en ese caso usa ch->broadcast(..., rawCompleto))
-    // Aquí lo haremos con el broadcast existente del Channel:
-    (void)irc; (void)ch; (void)cmdLineNoCRLF;
-    // Si tu Channel::broadcast ya arma el prefijo, llama a ch->broadcast( *irc.clients, rawCompleto );
+    if (!ch)
+        return;
+
+    // Asegura CRLF
+    std::string raw = cmdLineNoCRLF;
+    if (raw.size() < 2 || raw.substr(raw.size()-2) != "\r\n")
+        raw += "\r\n";
+
+    // Channel::broadcast(const map<int,Client*>&, const string&)
+    ch->broadcast(serv.getClients(), raw);
 }
 
-// Helpers de validación
 bool isChannelName(const std::string& s)
 {
     return !s.empty() && s[0] == '#';

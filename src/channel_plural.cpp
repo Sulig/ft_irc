@@ -1,4 +1,5 @@
 #include "inc/channel_plural.hpp"
+#include "inc/Server.hpp"
 
 static std::string normName(const std::string& s)
 {
@@ -40,16 +41,17 @@ void Channels::eraseIfEmpty(const std::string& name)
 {
     std::string key = normName(name);
     std::map<std::string, Channel*>::iterator it = _byName.find(key);
-    if (it != _byName.end() && it->second->empty()){
+    if (it != _byName.end() && it->second->empty())
+    {
         delete it->second;
         _byName.erase(it);
     }
 }
 
-void Channels::removeClientEverywhere(const t_irc& irc, int fd)
+void Channels::removeClientEverywhere(Server serv, int fd)
 {
-    (void)irc;
-    for (std::map<std::string, Channel*>::iterator it=_byName.begin(); it!=_byName.end(); ++it)
+    (void)serv;
+    for (std::map<std::string, Channel*>::iterator it = _byName.begin(); it != _byName.end(); ++it)
         it->second->remove(fd);
     // No borramos mapas aquí; que el controlador de QUIT llame a eraseIfEmpty por cada canal si quiere.
 }
