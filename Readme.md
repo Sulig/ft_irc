@@ -7,6 +7,7 @@ PASS + <secreto>                                    // en T2
 HELP                                                // te ensena la lista de cmds, puede pedir uno especifico
 NICK + <nick>                                       // pones tu nickname
 USER + <username> + <mode> + <unused> :<realname>   // USER samanta 0 (mode puede ser * tmb) * :Samanta Pascual
+Si una terminal recive PING + num, se escribe en esa terminal PONG + num, si no se cierra.
 
 
 ## Connectar con Irssi:

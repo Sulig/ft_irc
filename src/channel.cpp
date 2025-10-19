@@ -1,5 +1,6 @@
 #include "inc/channel.hpp"
 #include "inc/Client.hpp"
+#include <iostream>
 
 // constructor
 Channel::Channel(const std::string& name) : _name(name), _topic(""),
@@ -59,6 +60,8 @@ bool Channel::has(int fd) const
 void Channel::add(int fd)
 {
     if (!has(fd)) _members.push_back(fd);
+    std::cerr << "[DBG] JOIN to " << _name << " this=" << (const void*)this
+          << " add fd=" << fd << " size=" << _members.size() << "\n";
 }
 
 void Channel::remove(int fd)

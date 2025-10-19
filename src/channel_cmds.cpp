@@ -2,6 +2,22 @@
 #include "inc/helpers.hpp"
 #include "inc/Client.hpp"
 #include "inc/Server.hpp"
+#include <iostream>
+
+// Helper para todos usemos el MISMO nombre de canal, es un patch
+static std::string normChan(std::string s) {
+    // quita espacios al principio y al final
+    while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) s.erase(s.begin());
+    while (!s.empty() && (s.back()  == ' ' || s.back()  == '\t')) s.pop_back();
+    // quita \r y \n por si se colaron
+    for (size_t i = 0; i < s.size();) {
+        if (s[i] == '\r' || s[i] == '\n') s.erase(i, 1);
+        else ++i;
+    }
+    if (s.empty()) return s;
+    if (s[0] != '#') s.insert(s.begin(), '#');
+    return s;
+}
 
 void handlePRIVMSG(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
@@ -21,7 +37,7 @@ void handlePRIVMSG(Server& serv, Channels& chans, int fd, const std::vector<std:
     // A canal
     if (isChannelName(target))
     {
-        std::string chName = target[0] == '#' ? target : ("#" + target);
+        std::string chName = normChan(target);
         Channel* ch = chans.find(chName);
         if (!ch)
         {
@@ -256,23 +272,19 @@ void handleJOIN(Server& serv, Channels& chans, int fd, const std::vector<std::st
         return;
     }
 
-    std::string chName = params[0];
-    if (!isChannelName(chName))
-        chName = "#" + chName;
-
-    std::string key = (params.size() >= 2 ? params[1] : "");
+    // 🔧 usar SIEMPRE el nombre normalizado
+    std::string chName = normChan(params[0]);
+    std::string key    = (params.size() >= 2 ? params[1] : "");
 
     Channel* ch = chans.find(chName);
     if (!ch)
     {
-        // canal no existe → lo creamos y añadimos al cliente
         ch = chans.getOrCreate(chName);
-        ch->giveOp(fd);
-        ch->setModeK(true, key);
+        ch->giveOp(fd);            // primer usuario operador
+        // ❌ NADA de setModeK(true, key) al crear
     }
     else
     {
-        // canal existe → validamos si puede entrar
         if (ch->modeI() && !ch->isInvited(me->getNick()))
         {
             sendRawFd(fd, ":server 473 " + me->getNick() + " " + chName + " :Cannot join channel (+i)\r\n");
@@ -290,24 +302,22 @@ void handleJOIN(Server& serv, Channels& chans, int fd, const std::vector<std::st
         }
     }
 
-    // Añadir usuario al canal
     ch->add(fd);
 
-    // Mensaje JOIN a todos los miembros
-    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost JOIN :" + chName + "\r\n";
+    // 🔧 JOIN sin ":" delante del nombre del canal
+    std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost JOIN " + chName + "\r\n";
     ch->broadcast(serv.getClients(), raw);
 
-    // Enviar topic si existe
     if (!ch->topic().empty())
         sendRawFd(fd, ":server 332 " + me->getNick() + " " + chName + " :" + ch->topic() + "\r\n");
     else
         sendRawFd(fd, ":server 331 " + me->getNick() + " " + chName + " :No topic is set\r\n");
 
-    // Enviar lista de nicks
     std::string names = ch->namesList(serv.getClients());
     sendRawFd(fd, ":server 353 " + me->getNick() + " = " + chName + " :" + names + "\r\n");
     sendRawFd(fd, ":server 366 " + me->getNick() + " " + chName + " :End of /NAMES list\r\n");
 }
+
 
 
 

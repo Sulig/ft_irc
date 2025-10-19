@@ -14,7 +14,18 @@
 
 # include <cerrno>
 # include <sys/socket.h>
-# include <bits/socket.h>
+// # include <bits/socket.h> comentado para mi mac
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <poll.h>
+#include <cerrno>   // si usas errno / strerror
+#include <cstring>  // si usas memset, strerror, etc.
+
 
 /* Constructor & destructor */
 void	Client::clientStartVars(void)
