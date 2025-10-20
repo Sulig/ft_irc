@@ -1,5 +1,6 @@
 #include "inc/channel.hpp"
 #include "inc/Client.hpp"
+#include "inc/helpers.hpp"
 #include <iostream>
 
 // constructor
@@ -173,16 +174,13 @@ void Channel::clearInvite(const std::string& nick)
 
 void Channel::broadcast(const std::map<int, Client*>& clients, const std::string& raw) const
 {
-    // Importante: raw debe terminar en \r\n (hazlo donde construyes el mensaje)
+    // 'raw' debe acabar en \r\n
     for (size_t i = 0; i < _members.size(); ++i)
     {
         int fd = _members[i];
-        std::map<int, Client*>::const_iterator iter = clients.find(fd);
-        if (iter == clients.end())
+        if (clients.find(fd) == clients.end())
             continue;
-
-        Client* c = iter->second;
-        c->appendToSendBuffer(raw); // mirar problema ?, anadir include Client era
+        sendRawFd(fd, raw);
     }
 }
 
@@ -191,17 +189,15 @@ void Channel::broadcastExcept(const std::map<int, Client*>& clients, Client* exc
     for (size_t i = 0; i < _members.size(); ++i)
     {
         int fd = _members[i];
-        std::map<int, Client*>::const_iterator iter = clients.find(fd);
-        if (iter == clients.end())
+        std::map<int, Client*>::const_iterator it = clients.find(fd);
+        if (it == clients.end())
             continue;
-
-        Client* c = iter->second;
-        if (c == except) // saltar al emisor
-            continue;
-
-        c->appendToSendBuffer(raw);
+        if (it->second == except)
+            continue; // no eco al emisor
+        sendRawFd(fd, raw);
     }
 }
+
 
 std::string Channel::modeString() const
 {

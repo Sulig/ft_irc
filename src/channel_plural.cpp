@@ -4,12 +4,23 @@
 # include "inc/channel_plural.hpp"
 # include "inc/channel_cmds.hpp"
 
-static std::string normName(const std::string& s)
+static std::string normName(std::string s)
 {
-    // Asegura que empiece por '#'
-    if (!s.empty() && s[0] == '#')
+    // trim inicio/fin (espacios y tabs)
+    while (!s.empty() && (s.front() == ' ' || s.front() == '\t'))
+    s.erase(s.begin());
+    while (!s.empty() && (s.back()  == ' ' || s.back()  == '\t'))
+    s.pop_back();
+
+    // elimina CR/LF rezagados
+    s.erase(std::remove(s.begin(), s.end(), '\r'), s.end());
+    s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
+
+    if (s.empty())
         return s;
-    return "#" + s;
+    if (s[0] != '#')
+        s.insert(s.begin(), '#');
+    return s;
 }
 
 Channels::Channels() {}
@@ -25,9 +36,10 @@ Channel* Channels::getOrCreate(const std::string& name)
 {
     std::string key = normName(name);
     std::map<std::string, Channel*>::iterator it = _byName.find(key);
+    // it = #general || 
 
     if (it != _byName.end())
-        return it->second;
+        return it->second; // Cada entrada del mapa es un par: it->first → la clave (el nombre del canal) : it->second → el valor (el Channel* guardado)
 
     Channel* c = new Channel(key);
     _byName[key] = c;

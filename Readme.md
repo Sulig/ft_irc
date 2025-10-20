@@ -31,3 +31,5 @@ MODE    ➝ cambia flags ➝ broadcast cambio
 INVITE  ➝ marca nick como invitado ➝ envía notificación                         ✓
 KICK    ➝ elimina miembro ➝ broadcast KICK                                      ✓
 QUIT    ➝ elimina usuario de todos los canales ➝ broadcast QUIT                 ✓
+
+QUIT Y PART NECESARIOS ??

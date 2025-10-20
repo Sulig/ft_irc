@@ -4,18 +4,26 @@
 #include "inc/Server.hpp"
 #include <iostream>
 
-// Helper para todos usemos el MISMO nombre de canal, es un patch
-static std::string normChan(std::string s) {
+// Helper preventivo
+static std::string normChan(std::string s)
+{
     // quita espacios al principio y al final
-    while (!s.empty() && (s.front() == ' ' || s.front() == '\t')) s.erase(s.begin());
-    while (!s.empty() && (s.back()  == ' ' || s.back()  == '\t')) s.pop_back();
+    while (!s.empty() && (s.front() == ' ' || s.front() == '\t'))
+        s.erase(s.begin());
+    while (!s.empty() && (s.back()  == ' ' || s.back()  == '\t'))
+        s.pop_back();
     // quita \r y \n por si se colaron
-    for (size_t i = 0; i < s.size();) {
-        if (s[i] == '\r' || s[i] == '\n') s.erase(i, 1);
-        else ++i;
+    for (size_t i = 0; i < s.size();)
+    {
+        if (s[i] == '\r' || s[i] == '\n')
+            s.erase(i, 1);
+        else
+            ++i;
     }
-    if (s.empty()) return s;
-    if (s[0] != '#') s.insert(s.begin(), '#');
+    if (s.empty())
+        return s;
+    if (s[0] != '#')
+        s.insert(s.begin(), '#');
     return s;
 }
 
@@ -272,16 +280,20 @@ void handleJOIN(Server& serv, Channels& chans, int fd, const std::vector<std::st
         return;
     }
 
-    // 🔧 usar SIEMPRE el nombre normalizado
+    // nombre normalizado
     std::string chName = normChan(params[0]);
-    std::string key    = (params.size() >= 2 ? params[1] : "");
+    std::string key    = (params.size() >= 2 ? params[1] : ""); // mode +k
 
     Channel* ch = chans.find(chName);
+    // DEBUG
+    std::cerr << "[DBG] find channel  raw='" << params[0]
+          << "'  norm='" << chName
+          << "'  user='" << me->getNick()
+          << "'  ptr=" << (const void*)ch;
     if (!ch)
     {
         ch = chans.getOrCreate(chName);
-        ch->giveOp(fd);            // primer usuario operador
-        // ❌ NADA de setModeK(true, key) al crear
+        ch->giveOp(fd);
     }
     else
     {
@@ -304,7 +316,6 @@ void handleJOIN(Server& serv, Channels& chans, int fd, const std::vector<std::st
 
     ch->add(fd);
 
-    // 🔧 JOIN sin ":" delante del nombre del canal
     std::string raw = ":" + me->getNick() + "!" + me->getNick() + "@localhost JOIN " + chName + "\r\n";
     ch->broadcast(serv.getClients(), raw);
 
