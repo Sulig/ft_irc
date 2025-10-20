@@ -27,6 +27,7 @@ static std::string normChan(std::string s)
     return s;
 }
 
+// PRIVMSG: PRIVMSG <#channel> <:msg> || sin los : solo coge hasta el primer espacio
 void handlePRIVMSG(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
     Client* me = getClientFd(serv, fd);
@@ -78,13 +79,25 @@ void handlePRIVMSG(Server& serv, Channels& chans, int fd, const std::vector<std:
 
 
 
-/* PART: PART <#chan> [<message>] */
+
+void handlePART(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
+{
+    (void)serv;
+    (void)chans;
+    (void)fd;
+    (void)params;
+
+    std::cerr << "Part not implemented" << "\n";
+}
+
+/* PART: PART <#chan> [<message>] 
 void handlePART(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
     Client* me = getClientFd(serv, fd);
     if (!me) return;
 
-    if (params.empty()) {
+    if (params.empty())
+    {
         sendRawFd(fd, ":server 461 " + me->getNick() + " PART :Not enough parameters\r\n");
         return;
     }
@@ -106,7 +119,7 @@ void handlePART(Server& serv, Channels& chans, int fd, const std::vector<std::st
     ch->remove(fd);
     chans.eraseIfEmpty(chName);
 }
-
+*/
 
 
 
@@ -174,7 +187,19 @@ void handleINVITE(Server& serv, Channels& chans, int fd, const std::vector<std::
 
 
 
-/* QUIT: QUIT [:message] */
+
+
+void handleQUIT(Server& serv, Channels& chans, int fd, const std::string& quitMsg)
+{
+    (void)serv;
+    (void)chans;
+    (void)fd;
+    (void)quitMsg;
+
+    std::cerr << "Quit not implemented" << "\n";
+}
+
+/* QUIT: QUIT [:message] 
 void handleQUIT(Server& serv, Channels& chans, int fd, const std::string& quitMsg)
 {
     Client* me = getClientFd(serv, fd);
@@ -207,7 +232,7 @@ void handleQUIT(Server& serv, Channels& chans, int fd, const std::string& quitMs
     // directamente:
     // serv.removeClient(fd);
 }
-
+*/
 
 
 
@@ -267,7 +292,7 @@ void handleKICK(Server& serv, Channels& chans, int fd, const std::vector<std::st
 
 
 
-/* JOIN: JOIN <#chan> [<key>] */
+/* JOIN: JOIN <#chan> <"key"> */
 void handleJOIN(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
     Client* me = getClientFd(serv, fd);
@@ -390,11 +415,12 @@ void handleTOPIC(Server& serv, Channels& chans, int fd, const std::vector<std::s
 
 
 
-/* MODE: MODE <#chan> [<modes> [params...]] */
+/* MODE: MODE <#chan> <modes> params... " " */
 void handleMODE(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
     Client* me = getClientFd(serv, fd);
-    if (!me) return;
+    if (!me)
+        return;
 
     if (params.empty())
     {
