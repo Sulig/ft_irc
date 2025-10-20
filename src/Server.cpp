@@ -244,7 +244,7 @@ void	Server::handleClientExit(size_t pos, int client_fd)
 		}
 	}
 	//todo -> set proper farewell }[vP] ?
-	std::cout << CP << client_fd << " |Tv]// Come back soon!" << DEF << std::endl;
+	std::cout << CP << client_fd << "|> Come back soon!" << DEF << std::endl;
 
 	close(client_fd);
 
@@ -466,7 +466,8 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 			break ;
 		}
 	}
-
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
 	_clients[client_fd]->setLastActivity(time(NULL));
 }
 
@@ -486,9 +487,9 @@ std::string	Server::sendWelcome(int client_fd)
 	if (_clients[client_fd]->getIsRegistered())
 	{
 		Client *client = _clients[client_fd];
-		welcome += ":" + std::string(SERVER_NAME) + "001" + client->getNick() + ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
-		welcome += ":" + std::string(SERVER_NAME) + "002" + client->getNick() + ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
-		welcome += ":" + std::string(SERVER_NAME) + "003" + client->getNick() + ":This server was created on: " + getCreationTime() + "\r\n" + std::string(DEF);
+		welcome += ":" + std::string(SERVER_NAME) + " 001 " + client->getNick() + ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
+		welcome += ":" + std::string(SERVER_NAME) + " 002 " + client->getNick() + ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
+		welcome += ":" + std::string(SERVER_NAME) + " 003 " + client->getNick() + ":This server was created on: " + getCreationTime() + "\r\n" + std::string(DEF);
 		_clients[client_fd]->setIsWelcomeSend(true);
 	}
 	else
@@ -718,6 +719,7 @@ std::string	Server::user(int client_fd)
 	return (help);
 }
 
+/*
 std::string	Server::privmsg(int client_fd)
 {
 	std::string	help = std::string(DEF);
@@ -752,6 +754,7 @@ std::string	Server::privmsg(int client_fd)
 	}
 	return (help);
 }
+*/
 
 #pragma region PING - PONG
 std::string	Server::ping(int client_fd)
@@ -779,7 +782,7 @@ void	Server::pingClient(int client_fd)
 
 	_pong = itoa(rand());
 	std::string help = std::string(CWR) + "9\\ * PING - \"" + _pong + "\" -\r\n" + std::string(DEF);
-	std::cout << "Sended a PING to: " << client_fd << "with -" << _pong << std::endl;
+	std::cout << "~ * ~ Sended a PING to: " << client_fd << "with: " << _pong << " as token" << std::endl;
 	_clients[client_fd]->setIsPongSent(false);
 	_clients[client_fd]->setIsPongWaiting(true);
 	_clients[client_fd]->setLastPingSent(time(NULL));
