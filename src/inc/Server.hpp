@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/15 16:36:19 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/21 16:52:21 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,8 +40,8 @@
 # define VERSION		"v.0.1"		// Server version
 # define BACKLOG		20			// Max X persons in conexion queque
 # define MAX_BITS_RD	512			// Max bits for reading
-# define PING_INTERV	120			// x sec. Interval for PING
-# define PING_TIMEOUT	60			// x sec. Timeout if client don't respond to PING
+# define PING_INTERV	1200		// x sec. Interval for PING
+# define PING_TIMEOUT	600			// x sec. Timeout if client don't respond to PING
 
 class Client;
 //class Channels; // para cmds

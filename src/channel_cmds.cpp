@@ -8,10 +8,10 @@
 static std::string normChan(std::string s)
 {
     // quita espacios al principio y al final
-    while (!s.empty() && (s.front() == ' ' || s.front() == '\t'))
+    while (!s.empty() && (s[0] == ' ' || s[0] == '\t'))
         s.erase(s.begin());
-    while (!s.empty() && (s.back()  == ' ' || s.back()  == '\t'))
-        s.pop_back();
+    while (!s.empty() && (s[s.size() - 1]  == ' ' || s[s.size() - 1]  == '\t'))
+        s.erase(s.end() - 1);
     // quita \r y \n por si se colaron
     for (size_t i = 0; i < s.size();)
     {
@@ -90,7 +90,7 @@ void handlePART(Server& serv, Channels& chans, int fd, const std::vector<std::st
     std::cerr << "Part not implemented" << "\n";
 }
 
-/* PART: PART <#chan> [<message>] 
+/* PART: PART <#chan> [<message>]
 void handlePART(Server& serv, Channels& chans, int fd, const std::vector<std::string>& params)
 {
     Client* me = getClientFd(serv, fd);
@@ -199,7 +199,7 @@ void handleQUIT(Server& serv, Channels& chans, int fd, const std::string& quitMs
     std::cerr << "Quit not implemented" << "\n";
 }
 
-/* QUIT: QUIT [:message] 
+/* QUIT: QUIT [:message]
 void handleQUIT(Server& serv, Channels& chans, int fd, const std::string& quitMsg)
 {
     Client* me = getClientFd(serv, fd);
@@ -255,7 +255,7 @@ void handleKICK(Server& serv, Channels& chans, int fd, const std::vector<std::st
     std::string chName = params[0];
     const std::string nick = params[1];
     std::string reason = (params.size() >= 3 ? params[2] : std::string());
-    
+
     if (!isChannelName(chName))
         chName = "#" + chName;
 
