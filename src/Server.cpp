@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/27 19:30:22 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/27 20:12:35 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -188,6 +188,7 @@ void	Server::addNewClient()
 		_clients[new_client.fd]->setPos(_fds.size() - 1);
 
 		std::cout << CCR << "New Client connected, with FD = " << new_client.fd << DEF << std::endl;
+		sendWelcome(new_client.fd);
 		return ;
 	}
 	catch (const std::exception& e)
@@ -335,6 +336,8 @@ void	Server::processClientMsg(int client_fd)
 		//* Clean after using this command.
 		cmd.cmd_num = -1;
 		cmd.args.clear();
+		if (_clients.find(client_fd) == _clients.end())
+			return ;
 		_clients[client_fd]->setActualCommand(cmd);
 	}
 	_clients[client_fd]->setBuffer("");
@@ -455,7 +458,7 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 		case 4: handlePRIVMSG(*this, _channels, client_fd, cmd.args); break;
 
 		// Nuevos handlers de canales
-		case 5: handleQUIT(*this, _channels, client_fd, ""); break;
+		case 5: handleQUIT(*this, _channels, client_fd, ""); quit(client_fd); break;
 		case 6: handleJOIN(*this, _channels, client_fd, cmd.args); break;
 		case 7: handlePART(*this, _channels, client_fd, cmd.args); break;
 		case 8: handleKICK(*this, _channels, client_fd, cmd.args); break;
@@ -504,7 +507,7 @@ void	Server::sendWelcome(int client_fd)
 		sendMessageTo(client_fd, welcome);
 		welcome.clear();
 		_clients[client_fd]->setIsWelcomeSend(true);
-		std::cout << "Client " << client_fd << " (" << client->getNick() << ") fully registered and welcomed." << std::endl;
+		std::cout << CG << "Client " << client_fd << " (" << client->getNick() << ") fully registered and welcomed." << DEF << std::endl;
 	}
 	else if (!_clients[client_fd]->getIsIrrsi())
 	{
@@ -779,6 +782,24 @@ std::string	Server::privmsg(int client_fd)
 	return (help);
 }
 */
+
+void	Server::quit(int client_fd)
+{
+	if (_clients.find(client_fd) == _clients.end())
+		return ;
+	std::string	help = std::string(DEF);
+	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
+	std::string goodbye = "";
+
+	if (!args.size())
+		goodbye = "Disconecting with QUIT";
+	else
+		goodbye = args[0];
+	std::cout << CP << "\t" << _clients[client_fd]->getNick() << "|> " << goodbye << std::endl;
+	// -- send the message to all chanels that client has joined to
+	//----------
+	handleClientExit(_clients[client_fd]->getPos(), client_fd);
+}
 
 #pragma region PING - PONG
 std::string	Server::ping(int client_fd)

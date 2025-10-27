@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/27 19:11:45 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/27 19:48:26 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -86,6 +86,7 @@ class	Server
 		std::string	nick(int client_fd);
 		std::string	user(int client_fd);
 		std::string	privmsg(int client_fd);
+		void		quit(int client_fd);
 		std::string	ping(int client_fd);
 		std::string	pong(int client_fd);
 		std::string	clear(void);
