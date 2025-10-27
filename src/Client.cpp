@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/15 16:32:30 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/27 19:06:50 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@
 void	Client::clientStartVars(void)
 {
 	_fd = 0;
+	_is_irssi = false;
 	_is_logged = false;
 	_is_registered = false;
 	_is_welcomeSend = false;
@@ -57,6 +58,7 @@ Client::~Client()	{}
 size_t	Client::getFD(void)	{	return (this->_fd);	}
 size_t	Client::getPos(void)	{	return (this->_pos);	}
 bool	Client::getIsLogged(void)	{	return (this->_is_logged);	}
+bool	Client::getIsIrrsi(void)	{	return (this->_is_irssi);	}
 bool	Client::getIsRegistered(void)	{	return (this->_is_registered);	}
 bool	Client::getIsWelcomeSend(void)	{	return (this->_is_welcomeSend);	}
 std::string	Client::getBuffer(void)	{	return (this->_buffer);	}
@@ -79,6 +81,7 @@ t_command					Client::getActualCommand(void)	{	return (this->_actualcmd);	}
 
 /*	SETTERS	*/
 void	Client::setPos(size_t pos)	{	this->_pos = pos;	}
+void	Client::setIsIrrsi(bool irrsi)	{	this->_is_irssi = irrsi;	}
 void	Client::setIsLogged(bool logged)	{	this->_is_logged = logged;	}
 void	Client::setIsRegistered(bool registerMe)	{	this->_is_registered = registerMe;	}
 void	Client::setIsWelcomeSend(bool welcome)	{	this->_is_welcomeSend = welcome;	}

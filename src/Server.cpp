@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/15 16:39:20 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/27 19:30:22 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -188,7 +188,6 @@ void	Server::addNewClient()
 		_clients[new_client.fd]->setPos(_fds.size() - 1);
 
 		std::cout << CCR << "New Client connected, with FD = " << new_client.fd << DEF << std::endl;
-		sendMessageTo(new_client.fd, sendWelcome(new_client.fd));
 		return ;
 	}
 	catch (const std::exception& e)
@@ -215,7 +214,10 @@ void	Server::sendMessageTo(int client_fd, std::string message)
 		return ;
 	//Actualize the events of this client to send the message
 	_fds[_clients[client_fd]->getPos()].events = POLLIN | POLLOUT;
-	_clients[client_fd]->setSendBuffer(message);
+	if (_clients[client_fd]->getSendBuffer().empty())
+		_clients[client_fd]->setSendBuffer(message);
+	else
+		_clients[client_fd]->appendToSendBuffer(message);
 }
 
 void	Server::handleClientExit(size_t pos, int client_fd)
@@ -243,7 +245,6 @@ void	Server::handleClientExit(size_t pos, int client_fd)
 			return ;
 		}
 	}
-	//todo -> set proper farewell }[vP] ?
 	std::cout << CP << client_fd << "|> Come back soon!" << DEF << std::endl;
 
 	close(client_fd);
@@ -391,6 +392,15 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 	Client *client = _clients[client_fd];
 	std::string help = std::string(DEF);
 
+	/**/ // Only for debug ->
+	std::cout << client_fd << "| want to: " << cmd.cmd_num << "| with args: ";
+	if (cmd.args.size() == 0)
+		std::cout << "| no args |" << std::endl;
+	else
+		for (size_t i = 0; i < cmd.args.size(); i++)
+			std::cout << "|" << i << "| " << cmd.args[0] << std::endl;
+	/**/
+
 	if (!client->getIsLogged())
 	{
 		if (cmd.cmd_num != 0 && cmd.cmd_num != 1 && cmd.cmd_num != 16)
@@ -475,30 +485,34 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 
 #pragma region COMMANDS
 
-std::string	Server::sendWelcome(int client_fd)
+void	Server::sendWelcome(int client_fd)
 {
 	if (_clients.find(client_fd) == _clients.end())
-		return ("");
-	std::string welcome = std::string(CWR);
-	welcome += "* [###########################] *\r\n";
-	welcome += "* \\          WELCOME          / *\r\n";
-	welcome += "*  [#########################]  *\r\n\n";
-	welcome += std::string(DEF);
-	if (_clients[client_fd]->getIsRegistered())
+		return ;
+	Client	*client = _clients[client_fd];
+	std::string welcome = "";
+	if (client->getIsRegistered() && !client->getIsWelcomeSend())
 	{
-		Client *client = _clients[client_fd];
-		welcome += ":" + std::string(SERVER_NAME) + " 001 " + client->getNick() + ":Welcome to the IRC Network, " + client->getNick() + "!\r\n";
-		welcome += ":" + std::string(SERVER_NAME) + " 002 " + client->getNick() + ":Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
-		welcome += ":" + std::string(SERVER_NAME) + " 003 " + client->getNick() + ":This server was created on: " + getCreationTime() + "\r\n" + std::string(DEF);
+		welcome = ":" + std::string(SERVER_NAME) + " 001 " + client->getNick() + " :Welcome to the IRC Network, " + client->getNick() + "! ";
+		welcome += client->getUser() + "@localhost\r\n";
+		sendMessageTo(client_fd, welcome);
+		welcome = ":" + std::string(SERVER_NAME) + " 002 " + client->getNick() + " :Your host is " + std::string(SERVER_NAME) + ", running version " + std::string(VERSION) + "\r\n";
+		sendMessageTo(client_fd, welcome);
+		welcome = ":" + std::string(SERVER_NAME) + " 003 " + client->getNick() + " :This server was created on: " + getCreationTime() + "\r\n";
+		sendMessageTo(client_fd, welcome);
+		welcome = ":" + std::string(SERVER_NAME) + " 004 " + client->getNick() + " localhost 1.0 -- --\r\n";
+		sendMessageTo(client_fd, welcome);
+		welcome.clear();
 		_clients[client_fd]->setIsWelcomeSend(true);
+		std::cout << "Client " << client_fd << " (" << client->getNick() << ") fully registered and welcomed." << std::endl;
 	}
-	else
+	else if (!_clients[client_fd]->getIsIrrsi())
 	{
 		welcome += std::string(CY) + "> You're not registered yet!\r\n";
-		welcome += "> You must register first using the PASS & NICK commands.\r\n";
+		welcome += "> You must register first using the PASS, NICK && USER commands.\r\n";
 		welcome += std::string(CC) + "* \\ Send HELP or /help for more info / *" + std::string(DEF) + "\r\n";
+		sendMessageTo(client_fd, welcome);
 	}
-	return (welcome);
 }
 
 std::string	Server::helpMe(size_t helpWith, int client_fd)
@@ -598,16 +612,23 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 
 std::string	Server::cap(int client_fd)
 {
-	std::string	help = std::string(DEF);
 	std::vector<std::string>	args = _clients[client_fd]->getActualCmdArgs();
 
 	if (args.empty())
-		return (std::string(CR) + "CAP :No subcommand" + std::string(DEF) + "\r\n");
+		return ("CAP :No subcommand\r\n");
 	if (args[0].find("LS") != std::string::npos)
-		help += "CAP * LS:\r\n";
+	{
+		_clients[client_fd]->setIsIrrsi(true);
+		return ("CAP * LS :\r\n");
+	}
+	else if (args[0].find("END") != std::string::npos)
+	{
+		if (_clients[client_fd]->getIsRegistered())
+			sendWelcome(client_fd);
+		return ("");
+	}
 	else
-		return (std::string(CR) + "CAP :Invalid subcommand" + std::string(DEF) + "\r\n");
-	return (help);
+		return ("CAP :Invalid subcommand\r\n");
 }
 
 std::string	Server::pass(int client_fd)
@@ -661,14 +682,16 @@ std::string	Server::nick(int client_fd)
 
 	_clients[client_fd]->setNick(nick);
 	help += std::string(CG) + ":Nickname changed successfully to:" + nick + std::string(DEF) + "\r\n";
+	sendMessageTo(client_fd, help);
+	help.clear();
 	if (!(_clients[client_fd]->getUser().empty()))
 	{
 		_clients[client_fd]->setIsRegistered(true);
-		if (!(_clients[client_fd]->getIsWelcomeSend()))
-			help += sendWelcome(client_fd);
+		if (!_clients[client_fd]->getIsWelcomeSend() && !_clients[client_fd]->getIsIrrsi())
+			sendWelcome(client_fd);
 	}
 	else
-		help += std::string(CP) + " *Don't forget to add a username to! (use USER)" + std::string(DEF) + "\r\n";
+		help = std::string(CP) + " *Don't forget to add a username to! (use USER)" + std::string(DEF) + "\r\n";
 	return (help);
 }
 
@@ -707,15 +730,16 @@ std::string	Server::user(int client_fd)
 
 	_clients[client_fd]->setRealName(realName);
 	help += std::string(CG) + ":Real Name changed successfully to:" + realName + std::string(DEF) + "\r\n";
+	sendMessageTo(client_fd, help);
+	help.clear();
 	if (!(_clients[client_fd]->getNick().empty()))
 	{
 		_clients[client_fd]->setIsRegistered(true);
-		if (!(_clients[client_fd]->getIsWelcomeSend()))
-			help += sendWelcome(client_fd);
+		if (!_clients[client_fd]->getIsWelcomeSend() && !_clients[client_fd]->getIsIrrsi())
+			sendWelcome(client_fd);
 	}
 	else
-		help += std::string(CP) + " *Don't forget to add a nikname to! (use NICK)" + std::string(DEF) + "\r\n";
-
+		help = std::string(CP) + " *Don't forget to add a nikname to! (use NICK)" + std::string(DEF) + "\r\n";
 	return (help);
 }
 

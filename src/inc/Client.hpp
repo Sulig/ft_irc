@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/15 16:32:22 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/27 19:08:45 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 # include <string>
 # include <vector>
 # include <set>
+# include <ctime>
 
 # include "utils.hpp"
 
@@ -36,6 +37,7 @@ class	Client
 {
 	private:
 		int		_fd;
+		bool	_is_irssi;
 		bool	_is_logged;
 		bool	_is_registered;
 		bool	_is_welcomeSend;
@@ -73,6 +75,7 @@ class	Client
 		/*	GETTERS	*/
 		size_t	getFD(void);
 		size_t	getPos(void);
+		bool	getIsIrrsi(void);
 		bool	getIsLogged(void);
 		bool	getIsRegistered(void);
 		bool	getIsWelcomeSend(void);
@@ -95,6 +98,7 @@ class	Client
 
 		/*	SETTERS	*/
 		void	setPos(size_t pos);
+		void	setIsIrrsi(bool irssi);
 		void	setIsLogged(bool logged);
 		void	setIsRegistered(bool registerMe);
 		void	setIsWelcomeSend(bool welcome);

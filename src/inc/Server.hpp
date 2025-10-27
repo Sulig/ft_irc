@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/21 16:52:21 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/27 19:11:45 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -79,7 +79,7 @@ class	Server
 		void	executeCMD(int client_fd, t_command cmd);
 
 		/*	COMMANDS	*/
-		std::string	sendWelcome(int client_fd);
+		void	sendWelcome(int client_fd);
 		std::string	helpMe(size_t helpWith, int client_fd);
 		std::string	cap(int client_fd);
 		std::string	pass(int client_fd);
