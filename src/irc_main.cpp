@@ -6,15 +6,11 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 14:57:22 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/06 17:04:37 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/28 13:36:32 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 # include "inc/Server.hpp"
-# include "inc/Client.hpp"
-# include "inc/channel.hpp"
-# include "inc/channel_plural.hpp"
-# include "inc/channel_cmds.hpp"
 
 int	main(int argc, const char **args)
 {

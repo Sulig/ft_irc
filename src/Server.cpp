@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/27 20:12:35 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/28 14:32:15 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -67,10 +67,12 @@ Client	*Server::getClient(int fd)
 std::map<int, Client*>	Server::getClients(void)	{	return (_clients);	}
 /* ----- */
 
-
 /*	/=/	*/
 void	Server::startServer(int port, std::string pass)
 {
+	_port = port;
+	_pass = pass;
+
 	try
 	{
 		//* 1- Configure the `sock` struct
@@ -79,7 +81,6 @@ void	Server::startServer(int port, std::string pass)
 		address.sin_family = AF_INET;				// Ipv4
 		address.sin_addr.s_addr = INADDR_ANY;		// Listen all interfaces
 		address.sin_port  = htons(port);	// User port (this)
-		_port = port;
 
 		//* 2- Create socket
 		//	PF_INET (Ipv4 (Same as AF_INET, but more conventional)) -- SOCK_STREAM (TCP) -- 0 (Deffault)
@@ -115,7 +116,6 @@ void	Server::startServer(int port, std::string pass)
 		server_poll.fd = _server_fd;
 		server_poll.events = POLLIN;
 		server_poll.revents = 0;
-		this->_pass = pass;
 		_fds.push_back(server_poll);
 
 		// Start server
@@ -440,7 +440,6 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 		return ;
 	}
 
-	// he tocado el switch
 	switch (cmd.cmd_num)
 	{
 		case 0:
