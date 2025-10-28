@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/27 19:08:45 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/28 13:32:26 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,6 @@ class	Client
 
 		//*	CHANNEL	*/
 		std::set<std::string>	channel_name;
-		//std::map<std::string, Channel> ? no es mejor asi?
 
 		/*	PING - PONG	*/
 		time_t		_lastPingSent;
@@ -122,7 +121,7 @@ class	Client
 		void	appendToSendBuffer(std::string _send);
 		int		sendPendingData(void);
 
-		// para channel_name
+		/*	CHANNELS	*/
 		void	addChannel(const std::string& name);
 		void	removeChannel(const std::string& name);
 		bool	inChannel(const std::string& name) const;
