@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/29 17:42:53 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/28 14:32:15 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/30 20:26:27 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,7 +68,7 @@ std::map<int, Client*>	Server::getClients(void)	{	return (_clients);	}
 /* ----- */
 
 /*	/=/	*/
-void	Server::startServer(int port, std::string pass)
+void	Server::startServer(int port, const std::string& pass)
 {
 	_port = port;
 	_pass = pass;
@@ -326,15 +326,17 @@ void	Server::processClientMsg(int client_fd)
 		std::string	line = buffer.substr(0, buffer.find_first_of("\r\n"));
 		buffer = buffer.substr(buffer.find("\n") + 1);
 
-		t_command	cmd;
-		cmd.cmd_num = identifyCMD(normalizeCommand(line));
-		if (!(cmd.cmd_num >= _commands.size()))
-			line = line.substr(_commands[cmd.cmd_num].size());
+		t_cmd	cmd = Parser::parse(line);
+		/*
+		cmd.type = identifyCMD(normalizeCommand(line));
+		if (!(cmd.type >= _commands.size()))
+			line = line.substr(_commands[cmd.type].size());
 		cmd.args = parseArgs(line);
+		*/
 		_clients[client_fd]->setActualCommand(cmd);
 		executeCMD(client_fd, cmd);
 		//* Clean after using this command.
-		cmd.cmd_num = -1;
+		cmd.type = UNKNOWN;
 		cmd.args.clear();
 		if (_clients.find(client_fd) == _clients.end())
 			return ;
@@ -347,6 +349,7 @@ void	Server::processClientMsg(int client_fd)
 
 #pragma region PARSER
 
+/*
 size_t	Server::identifyCMD(std::string cmd)
 {
 	for (size_t i = 0; i < _commands.size(); i++)
@@ -357,6 +360,7 @@ size_t	Server::identifyCMD(std::string cmd)
 	}
 	return (-1);
 }
+*/
 
 std::vector<std::string>	Server::parseArgs(std::string input)
 {
@@ -385,52 +389,52 @@ std::vector<std::string>	Server::parseArgs(std::string input)
 	return (args);
 }
 
-void	Server::executeCMD(int client_fd, t_command cmd)
+void	Server::executeCMD(int client_fd, t_cmd cmd)
 {
 	if (_clients.find(client_fd) == _clients.end())
 		return ;
-	if (cmd.cmd_num >= _commands.size() && cmd.args.size() == 0)
+	if (cmd.type >= _commands.size() && cmd.args.size() == 0)
 		return ;
 
 	Client *client = _clients[client_fd];
 	std::string help = std::string(DEF);
 
 	/**/ // Only for debug ->
-	std::cout << client_fd << "| want to: " << cmd.cmd_num << "| with args: ";
+	std::cout << client_fd << "| want to: " << cmd.type << "| with args: ";
 	if (cmd.args.size() == 0)
 		std::cout << "| no args |" << std::endl;
 	else
 		for (size_t i = 0; i < cmd.args.size(); i++)
-			std::cout << "|" << i << "| " << cmd.args[0] << std::endl;
+			std::cout << "|" << i << "| " << cmd.args[i] << "||" << std::endl;
 	/**/
 
 	if (!client->getIsLogged())
 	{
-		if (cmd.cmd_num != 0 && cmd.cmd_num != 1 && cmd.cmd_num != 16)
+		if (cmd.type != HELP && cmd.type != PASS && cmd.type != CAP)
 		{
 			help += std::string(CR) + ":You're not logged yet!\r\n";
 			help += std::string(CY) + ":Use the command PASS to login!" + std::string(DEF) + "\r\n";
 			sendMessageTo(client_fd, help);
 		}
-		else if (cmd.cmd_num == 16)
+		else if (cmd.type == CAP)
 			sendMessageTo(client_fd, cap(client_fd));
-		else if (cmd.cmd_num == 0)
-			sendMessageTo(client_fd, helpMe(0, client_fd));
-		else if (cmd.cmd_num == 1)
+		else if (cmd.type == HELP)
+			sendMessageTo(client_fd, helpMe(HELP, client_fd));
+		else if (cmd.type == PASS)
 			sendMessageTo(client_fd, pass(client_fd));
 		_clients[client_fd]->setLastActivity(time(NULL));
 		return ;
 	}
 	if (!client->getIsRegistered())
 	{
-		switch (cmd.cmd_num)
+		switch (cmd.type)
 		{
-			case 0: sendMessageTo(client_fd, helpMe(0, client_fd)); break ;
-			case 1: sendMessageTo(client_fd, pass(client_fd)); break;
-			case 2: sendMessageTo(client_fd, nick(client_fd)); break;
-			case 3: sendMessageTo(client_fd, user(client_fd)); break;
-			case 14: sendMessageTo(client_fd, clear()); break;
-			case 16: sendMessageTo(client_fd, cap(client_fd)); break;
+			case HELP: sendMessageTo(client_fd, helpMe(HELP, client_fd)); break ;
+			case PASS: sendMessageTo(client_fd, pass(client_fd)); break;
+			case NICK: sendMessageTo(client_fd, nick(client_fd)); break;
+			case USER: sendMessageTo(client_fd, user(client_fd)); break;
+			case CLEAR: sendMessageTo(client_fd, clear()); break;
+			case CAP: sendMessageTo(client_fd, cap(client_fd)); break;
 		default:
 			std::string help = std::string(CR) + ":You don't have the access to this command 'till you register OR This command don't exist." + std::string(DEF) + "\r\n";
 			sendMessageTo(client_fd, help);
@@ -440,36 +444,36 @@ void	Server::executeCMD(int client_fd, t_command cmd)
 		return ;
 	}
 
-	switch (cmd.cmd_num)
+	switch (cmd.type)
 	{
-		case 0:
+		case HELP:
 			if (cmd.args.empty())
-				sendMessageTo(client_fd, helpMe(0, 1));
+				sendMessageTo(client_fd, helpMe(HELP, 1));
 			else
 			{
 				cmd.args[0] = normalizeCommand(cmd.args[0]);
-				sendMessageTo(client_fd, helpMe(identifyCMD(cmd.args[0]), 1));
+				sendMessageTo(client_fd, helpMe(Parser::identifyCmd(cmd.args[0]), 1));
 			}
 		break ;
-		case 1: sendMessageTo(client_fd, pass(client_fd)); break;
-		case 2: sendMessageTo(client_fd, nick(client_fd)); break;
-		case 3: sendMessageTo(client_fd, user(client_fd)); break;
-		case 4: handlePRIVMSG(*this, _channels, client_fd, cmd.args); break;
+		case PASS: sendMessageTo(client_fd, pass(client_fd)); break;
+		case NICK: sendMessageTo(client_fd, nick(client_fd)); break;
+		case USER: sendMessageTo(client_fd, user(client_fd)); break;
+		case PRIVMSG: handlePRIVMSG(*this, _channels, client_fd, cmd.args); break;
 
 		// Nuevos handlers de canales
-		case 5: handleQUIT(*this, _channels, client_fd, ""); quit(client_fd); break;
-		case 6: handleJOIN(*this, _channels, client_fd, cmd.args); break;
-		case 7: handlePART(*this, _channels, client_fd, cmd.args); break;
-		case 8: handleKICK(*this, _channels, client_fd, cmd.args); break;
-		case 9: handleINVITE(*this, _channels, client_fd, cmd.args); break;
-		case 10: handleTOPIC(*this, _channels, client_fd, cmd.args); break;
-		case 11: handleMODE(*this, _channels, client_fd, cmd.args); break;
+		case QUIT: handleQUIT(*this, _channels, client_fd, ""); quit(client_fd); break;
+		case JOIN: handleJOIN(*this, _channels, client_fd, cmd.args); break;
+		case PART: handlePART(*this, _channels, client_fd, cmd.args); break;
+		case KICK: handleKICK(*this, _channels, client_fd, cmd.args); break;
+		case INVITE: handleINVITE(*this, _channels, client_fd, cmd.args); break;
+		case TOPIC: handleTOPIC(*this, _channels, client_fd, cmd.args); break;
+		case MODE: handleMODE(*this, _channels, client_fd, cmd.args); break;
 
-		case 12: sendMessageTo(client_fd, ping(client_fd)); break;
-		case 13: sendMessageTo(client_fd, pong(client_fd)); break;
-		case 14: sendMessageTo(client_fd, clear()); break;
-		case 15: sendMessageTo(client_fd, serverStatus()); break;
-		case 16: sendMessageTo(client_fd, cap(client_fd)); break;
+		case PING: sendMessageTo(client_fd, ping(client_fd)); break;
+		case PONG: sendMessageTo(client_fd, pong(client_fd)); break;
+		case CLEAR: sendMessageTo(client_fd, clear()); break;
+		case STAT: sendMessageTo(client_fd, serverStatus()); break;
+		case CAP: sendMessageTo(client_fd, cap(client_fd)); break;
 
 		default:
 		{
@@ -517,34 +521,34 @@ void	Server::sendWelcome(int client_fd)
 	}
 }
 
-std::string	Server::helpMe(size_t helpWith, int client_fd)
+std::string	Server::helpMe(cmdType helpWith, int client_fd)
 {
 	std::string	help = std::string(CWR);
 	if (client_fd == 0 || client_fd == 1)
 	{
 		switch (helpWith)
 		{
-			case 0:
+			case HELP:
 			help += ":This are the supported commands:\r\n";
 				for (size_t i = 0; i < _commands.size(); i++)
 					help += "\t" + itoa(i) + "- |" + _commands[i] + "\r\n";
 				help += "*  [#########################]  *\r\n";
 				break;
 
-			case 1:
+			case PASS:
 			help += "Correct usage: PASS password\r\n";
 			help += ":Loggin in server with the server password;\r\n";
 			help += ":You can't use other commands until you're logged!\r\n";
 			help += "\t* Advice: This will set your nickname with a number // Use NICK to change it\r\n";
 				break;
 
-			case 2:
+			case NICK:
 			help += "Correct usage: NICK nikie\r\n";
 			help += ":Set your custom nick;\r\n";
 			help += "\t* Advice: Some characters are restricted!\r\n";
 				break;
 
-			case 3:
+			case USER:
 			help += "Correct usage: USER username mode    *   :Real Name\r\n";
 			help += "Other usage:   USER username host server :Real Name\r\n";
 			help += ":Set your username and Real Name;\r\n";
@@ -552,23 +556,23 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 			help += "\t* Advice: This must be used only once, so think your Real Name!\r\n";
 				break;
 
-			case 4:
+			case PRIVMSG:
 			help += "Correct usage: PRIVMSG sent_to :Message\r\n";
 			help += ":Send a private message to a destinatary;\r\n";
 			help += "\t* You can also send a message to a channel using '#' (Ej: PRIVMSG #group :Hello!)\r\n";
 				break;
 
-			case 12:
+			case PING:
 			help += "Correct usage: PING token\r\n";
 			help += ":Send \"PING\" to the server (checks if SERVER is still connected);\r\n";
 				break;
-			case 13:
+			case PONG:
 			help += "Correct usage: PONG token\r\n";
 			help += ":Send \"PONG\" to the server (checks if YOU are still connected);\r\n";
 				break;
-			case 14: help += "So many messages? -> Clear your terminal;\r\n"; break;
-			case 15: help += "Print server status;"; break;
-			case 16:
+			case CLEAR: help += "So many messages? -> Clear your terminal;\r\n"; break;
+			case STAT: help += "Print server status;"; break;
+			case CAP:
 			help += "Correct usage: CAP LS\r\n";
 			help += ":List server capabilities (none yet..);\r\n";
 				break;
@@ -588,11 +592,11 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 			help += "*  [#########################]  *\r\n";
 			help += "Thank you for using our server, to login follow this steps:\r\n";
 			help += std::string(CC) + " :STEP 1 - Use PASS command:\r\n";
-			help += helpMe(1, true);
+			help += helpMe(PASS, true);
 			help += std::string(CC) + " :STEP 2 - Use NICK command:\r\n";
-			help += helpMe(2, true);
+			help += helpMe(NICK, true);
 			help += std::string(CC) + " :STEP 3 - Use USER command:\r\n";
-			help += helpMe(3, true);
+			help += helpMe(USER, true);
 			help += std::string(CC) + " :STEP 4 - Have fun!\r\n";
 			help += std::string(CP) + "If you need some help with a specific command, use HELP COMMAND" + std::string(DEF) + "\r\n";
 		}
@@ -603,9 +607,9 @@ std::string	Server::helpMe(size_t helpWith, int client_fd)
 			help += std::string(CP) + ":But you're not registered yet!\r\n" + std::string(DEF);
 			help += ":To register, you need to:\r\n";
 			if (_clients[client_fd]->getNick().empty())
-				help += "* Use NICK command!\r\n" + helpMe(2, true);
+				help += "* Use NICK command!\r\n" + helpMe(NICK, true);
 			if (_clients[client_fd]->getUser().empty())
-				help += "* Use USER command!\r\n" + helpMe(3, true);
+				help += "* Use USER command!\r\n" + helpMe(USER, true);
 		}
 	}
 	help += std::string(DEF);
@@ -644,6 +648,8 @@ std::string	Server::pass(int client_fd)
 	if (_clients[client_fd]->getIsLogged())
 		return (std::string(CG) + "You're currently logged!\r\n" + std::string(CP) + "Maybe you wish to change your nick or send messages?\r\n" + std::string(DEF));
 
+	std::cout << "password given: " << args[0] << std::endl;
+
 	if (args[0] == _pass)
 	{
 		help += std::string(CGR) + "-- CORRECT PASSWORD --" + std::string(DEF) + "\r\n";
@@ -666,7 +672,7 @@ std::string	Server::nick(int client_fd)
 	if (nick.size() > NICK_MAX_CHARS)
 		return (std::string(CR) + ":Nickname is too long!" + std::string(DEF) + "\r\n");
 
-	if (!(identifyCMD(nick) >= _commands.size()))
+	if (!(Parser::identifyCmd(nick) != UNKNOWN))
 		return (std::string(CR) + ":Nickname can't be one of the commands!" + std::string(DEF) + "\r\n");
 
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)

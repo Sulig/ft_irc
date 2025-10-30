@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/28 13:32:26 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/30 19:57:03 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@
 # include <set>
 # include <ctime>
 
-# include "utils.hpp"
+# include "Parser.hpp"
 
 /*	NICK RULES	*/
 # define	NICK_MAX_CHARS			9
@@ -44,7 +44,7 @@ class	Client
 		size_t	_pos;
 
 		/*	COMMAND	*/
-		t_command				_actualcmd;
+		t_cmd				_actualcmd;
 
 		/*	CLIENT REGISTER VARS	*/
 		std::string	_buffer;
@@ -93,7 +93,7 @@ class	Client
 		time_t	getLastActivity(void);
 
 		std::vector<std::string>	getActualCmdArgs(void);
-		t_command					getActualCommand(void);
+		t_cmd					getActualCommand(void);
 
 		/*	SETTERS	*/
 		void	setPos(size_t pos);
@@ -115,7 +115,7 @@ class	Client
 		void	setLastPongSent(time_t time);
 		void	setLastActivity(time_t time);
 
-		void	setActualCommand(t_command cmd);
+		void	setActualCommand(t_cmd cmd);
 
 		//** */
 		void	appendToSendBuffer(std::string _send);

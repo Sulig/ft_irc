@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 13:42:52 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/27 19:06:50 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/30 20:25:09 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,7 @@ void	Client::clientStartVars(void)
 	_is_registered = false;
 	_is_welcomeSend = false;
 	_pos = 0;
-	_actualcmd.cmd_num = -1;
+	_actualcmd.type = UNKNOWN;
 	_buffer = "";
 	_sendbuffer = "";
 	_nick = "";
@@ -76,7 +76,7 @@ time_t	Client::getLastPongSent(void)	{	return (_lastPongSent);	}
 time_t	Client::getLastActivity(void)	{	return (_lastActivity);	}
 
 std::vector<std::string>	Client::getActualCmdArgs(void)	{	return (this->_actualcmd.args);	}
-t_command					Client::getActualCommand(void)	{	return (this->_actualcmd);	}
+t_cmd					Client::getActualCommand(void)	{	return (this->_actualcmd);	}
 /* ----- */
 
 /*	SETTERS	*/
@@ -99,7 +99,7 @@ void	Client::setLastPingSent(time_t time)	{	_lastPingSent = time;	}
 void	Client::setLastPongSent(time_t time)	{	_lastPongSent = time;	}
 void	Client::setLastActivity(time_t time)	{	_lastActivity = time;	}
 
-void	Client::setActualCommand(t_command cmd)	{	this->_actualcmd = cmd;	}
+void	Client::setActualCommand(t_cmd cmd)	{	this->_actualcmd = cmd;	}
 /* ----- */
 
 /*	/=/	*/

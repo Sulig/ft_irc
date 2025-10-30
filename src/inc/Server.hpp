@@ -6,7 +6,7 @@
 /*   By: sadoming <sadoming@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/10/06 16:26:01 by sadoming          #+#    #+#             */
-/*   Updated: 2025/10/27 19:48:26 by sadoming         ###   ########.fr       */
+/*   Updated: 2025/10/30 20:01:11 by sadoming         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 
 # include "colors.hpp"
 # include "utils.hpp"
+# include "Parser.hpp"
 
 # include <fcntl.h>
 # include <poll.h>
@@ -76,11 +77,11 @@ class	Server
 		void	processClientMsg(int client_fd);
 		size_t	identifyCMD(std::string cmd);
 		std::vector<std::string>	parseArgs(std::string input);
-		void	executeCMD(int client_fd, t_command cmd);
+		void	executeCMD(int client_fd, t_cmd cmd);
 
 		/*	COMMANDS	*/
 		void	sendWelcome(int client_fd);
-		std::string	helpMe(size_t helpWith, int client_fd);
+		std::string	helpMe(cmdType helpWith, int client_fd);
 		std::string	cap(int client_fd);
 		std::string	pass(int client_fd);
 		std::string	nick(int client_fd);
@@ -103,7 +104,7 @@ class	Server
 		std::map<int, Client*>	getClients(void);
 
 		//** */
-		void	startServer(int port, std::string pass);
+		void	startServer(int port, const std::string& pass);
 };
 
 #endif
